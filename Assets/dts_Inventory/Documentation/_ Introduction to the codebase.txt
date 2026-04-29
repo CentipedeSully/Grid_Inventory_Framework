@@ -1,0 +1,40 @@
+Hello User!
+
+Before jumping into the scripts directly, lets stop to understand why the following architecture
+was chosen. It'll help to understand the architecture itself.
+
+
+It isn't too complicated once you understand the why. Here are the problems that we needed to address:
+
+We need a container system that
+ 1) Can store items of various sizes
+ 2) Can find any item that's stored within the container (whether by item type or item position)
+ 3) Can quickly and easily reference items, and/or whole STACKS of items [new terminology there]
+ 4) Can visualize the placement of stored items for easier (and maybe satisfying) user engagement
+ 5) Can quickly check what cells are occupied, and if so, by what items
+
+With the overall problem defined. Lets state the solution simply now to better ease you into the codebase.
+
+ We're using a grid system that stores individual item -stacks- as unique hashsets that contain that item's cell positions.
+ 
+ If you don't know what a hashset is, here's an oversimplified explanation:
+ A hashset is a (C# specific) collection of unique elements. In other programming languages, these would be referred to as 'sets'.
+
+ In our case the unique elements are cell positions [written as (x,y)]. 
+
+ These unique hashsets of the item's cell positions are stored within...
+  1) A dictionary [as keys] that links each stack key to the item's itemData : For quick cell-position-to-item referencing
+  2) A dictionary [as keys] that links each stack key to the item's current stack size : For quick stack size referencing
+  3) A dictionary [as keys] that links each stack key to an item graphic : For quick graphic-to-stack referencing
+  4) A dictionary [as keys] that links each stack key to a text : For updating numerical feedback for users for each stack
+
+
+  If you don't know what a dictionary is, here's another oversimplified explanation:
+  A dictionary is a collection of [element-> value] pairs, where each element in a specific dictionary is unique (only occurs once).
+  Each element maps to a defined value. Also Dictionaries are collections that retieve data very quickly.
+
+
+  Each of these dictionaries are cross referencable from one another, which gives us the possibility to find any stored items by
+  either a position, or an itemData, or stack size, or graphic.
+
+  This is the foundation of the grid system. Understanding this should help you approach everything else that follows. 

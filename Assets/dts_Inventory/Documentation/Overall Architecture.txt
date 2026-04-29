@@ -1,0 +1,99 @@
+Here's how everything is connected in the demo scene:
+
+The Major players
+
+
+> InvInteracter (& InvManagerHelper)
+
+  This is what the user uses to interact with everything related to the inventory system.
+  It responds to input, infers the context of user clicks and button input, and directly
+  manipulates grids within Inv Windows if it detects the pointer within one. This also
+  handles providing audio/visual feedback for user actions, and can support both pointer
+  and directional input methods.
+  
+  This is my solution to tying everything together.
+  
+  You'll need something like this to interact with your own inventories, should you choose
+  to build your own to suit your specific needs.
+
+  Some of the InvInteracter's utilities may be referenced by referencing the InvManagerHelper static class.
+  This class was designed to help quickly reference things without needing a direct reference to the interacter itself.
+  Many of the major classes have helper classes to do this, should you need to build off of a preexisting feature.
+
+  - ContextMenuController , TransferMenuController & NumericalSelectorController 
+    
+    These are like sub classes of the InvInteracter [the invInteracter delegates work to them].
+    These exist to spawn and manage the menus dynamic menu buttons that're presented to the user after selecting an item. 
+    The InvInteracter generally summons these. If they've been summoned another way, they'll still affect the InvInteracter
+    should they successfully submit a valid context. The InvInteracter ignores invalid contexts, and the invInteracter also
+    ignores inputs, should it detect any of these menus as opened.
+
+
+
+
+> InputReader
+  
+  This is a throwaway script that is meant to be replaced. It's hardcoded to read wasd/arrow key
+  inputs, 'q' + 'e' + 'i' inputs, esc + lShift + tab + lCtlr + lAlt inputs, and mouse lClick + rClick + mClick
+   + middle zoom inputs. This exists to separate reading inputs from the invInteracter, to make it more
+   modular.
+
+   It's expected that you look at the inputReader script and hookup your own inputs to the invInteracter
+   (If you're using the new input system, for example).
+
+   The InputReader drives the InvInteracter every frame based on the inputs the reader detects.
+   From there, the InvInteracter does it's thing.
+
+
+
+> ItemCreator (& ItemCreatorHelper)
+
+  This is responsible for creating the item graphics that are placed in grids. It is also responsible
+  for recollecting freed up sprites that're no longer needed.
+
+  If you need to create an item for a grid, reference the ItemCreatorHelper. It'll build your item for you.
+
+
+
+> InvWindow
+
+  This is the reference to the Ui window that houses an InvGrid. This class is responsible for opening/closing the 
+  window directly, and is also responsible for pretty much anything else related to the window itself (renaming, resizing,
+  displaying info that's beyond the immediate scope of the grid itself). 
+  
+  The InvInteracter listens closely to what happens to each registered window. Upon invWindow destruction, the InvInteracter
+  will automatically close & unregister from the window (if it hasn't already).
+
+  Also InvWindows may reference their own grids.
+
+
+
+> InvGrid
+
+  The grid itself. This is responsible for tracking item positions, stack sizes, rotations, and all other data relating to items
+  within the grid. Items may be added, removed, and queried within grids. You can also query if certain spaces are occupied, or
+  if certain positions exist.
+
+  Metadata like the cell size or the grid's size may also be referenced here. InvWindows reference their grids when resizing.
+
+
+  - GridInteract , CellInteract
+    These are subcomponents of the grid that [both] immediately update the InvInteracter when the user's pointer enters/exist
+    the UiObject's rectTransform. This is how the InvInteracter keeps track of where the user is (and isn't).
+
+
+
+
+> NavigationHelper (& NavHelper)
+
+  This is a smaller class whose responsiblity is to tie the invInteracter's directional movement to Unity's event system.
+  This is needed to 1) provide a single point of contact to Unity's system (in case something breaks) and 2) To prevent
+  too many 'SetNavTarget' calls from reaching Unity's Event System each frame.
+
+  This utility is used primarily in the ContextMenuController, TransferMenuController, and NumericalSelectorController,
+  and is also used when renaming InvWindows.
+
+  Good lesson I've learned building this: You can only SetNavTarget once each frame, else a red error is thrown (unity needs
+  time to execute each function call). This tool handles that case by spreading out batch calls over each frame (using a queue)
+
+

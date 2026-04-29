@@ -1,0 +1,2 @@
+Noteworthy quirks
+> Only expand opened grids. An error will be thrown when attempting to expand a grid while it's closed.
