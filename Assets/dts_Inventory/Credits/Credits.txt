@@ -12,3 +12,12 @@ Ui Text
 
 Default Ui Audio
 > "Free Ui Click Sound Pack" from the Asset Store by SwishSwoosh
+
+
+
+
+
+
+If I've forgotten to mention any other asset, lemme know. 
+This project's nature is to provide a codebase and mechanisms to get you started building the system you need,
+so only a modest baseline of assets are in use-- to prove the system works.

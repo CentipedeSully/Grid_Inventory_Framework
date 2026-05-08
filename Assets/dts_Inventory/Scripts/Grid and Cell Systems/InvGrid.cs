@@ -1126,7 +1126,7 @@ namespace dtsInventory
         /// <param name="selectedGridPosition">The literal clicked position on the grid</param>
         /// <param name="spacialDefinition">The objects size defined as indexes</param>
         /// <param name="itemHandle">The index within the provided spacial definition that should align with the selected grid position</param>
-        /// <returns></returns>
+        /// <returns>A set of positions on this grid offset to the specified grid position</returns>
         public HashSet<(int, int)> ConvertSpacialDefIntoGridArea((int, int) selectedGridPosition, HashSet<(int, int)> spacialDefinition, (int, int) itemHandle)
         {
             if (spacialDefinition == null)

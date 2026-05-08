@@ -26,7 +26,7 @@ The Major players
     These exist to spawn and manage the menus dynamic menu buttons that're presented to the user after selecting an item. 
     The InvInteracter generally summons these. If they've been summoned another way, they'll still affect the InvInteracter
     should they successfully submit a valid context. The InvInteracter ignores invalid contexts, and the invInteracter also
-    ignores inputs, should it detect any of these menus as opened.
+    ignores inputs if it detects any of these menus as opened.
 
 
 
@@ -46,12 +46,41 @@ The Major players
 
 
 
+
+> InputFilter
+  
+  This is a global static tool that helps lock and unlock non-ui inputs. It's located in the same file as the InputReader.
+  If you'd like an object to lock map/player inputs, the InputFilter remembers that source gameobject, and then makes the 
+  inputReader to stop sharing inputs with all non-ui scritps until that source gameObject tells the InputFilter unlock.
+
+  The InputFilter remembers multiple source gameObjects that request non-ui locking. Non-ui will remain locked until EVERY
+  source gameObject requests to unlock non-ui.
+
+  The class is located in the same file as the inputReader.
+
+
+
+
 > ItemCreator (& ItemCreatorHelper)
 
   This is responsible for creating the item graphics that are placed in grids. It is also responsible
   for recollecting freed up sprites that're no longer needed.
 
   If you need to create an item for a grid, reference the ItemCreatorHelper. It'll build your item for you.
+
+
+
+
+
+> ItemData (scriptable object)
+  This is the core architecture for all grid items. Every item instance will reference an ItemData, and the system will
+  always check an item's itemData for information. Changing an item's itemData will affect all instances of that item.
+
+  To create a new item, create a new itemData asset in you project files [Lclick > Create > itemData]. Then customize it until
+  you're satisfied. You can test the item in the demo scene by selecting the "Game Utilities" gameObject and specifying you item
+  in the "DebugSpawnItem" script component. Then during runtime just select the spawnItem checkbox. 
+
+
 
 
 
@@ -65,6 +94,7 @@ The Major players
   will automatically close & unregister from the window (if it hasn't already).
 
   Also InvWindows may reference their own grids.
+
 
 
 

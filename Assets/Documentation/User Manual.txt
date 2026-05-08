@@ -1,0 +1,128 @@
+> Creating Items
+  1) Create the item asset in your project files [right-click > create > itemData]
+
+  2) Customize the item to you needs
+     - Draw your sprite: 
+       1 cell is (by default) 32x32 pixels. So a 4x1 item's sprite would be 128x32 pixels.
+       You may change the cell size of each grid, and the system will do its best to resize your item's rectTransform
+       to fit each grid's cell size. (If the default cellSize limitation of 32x32 proves to be an issue, I'll implement
+       support for greater resolution sprites)
+     
+     - Define the item's spacial definition: 
+       A 4x1 item is a horizontal row of 4 cells. For simplicity, we could imagine that item's cells being referenced as
+       (0,0), (1,0), (2,0), & (3,0) -- keeping the bottomLeft of the item/s cells at (0,0). This 'spacial definition' 
+       tells the system the exact item's shape, and which cells live where in relation to each other.
+     
+     - Define the item handle:
+       The item handle of an item represents where the item will be centered when picked up and placed. Rotations happen
+       around the item handle, and when the item is placed on the grid the item handle is placed on the grid first, then
+       the item's spacial definition is projected around the itemHandle onto the selected grid space (assuming the item 
+       fits).
+
+     - Define an item code:
+       This should be unique to this item. NO ither itemData should share this code. This code allows the grid to compare
+       items-- if both items share the same itemcode, then they're both considered instances of the same item.
+
+     - Stack limit:
+       This defines how many of this item may be kept in the same position. 
+       
+     - Everything else is game flavor, and may be changed, repurposed, or deleted based on you project's needs
+
+  3) Test spawining the item:
+     - In the demo scene, go to (Demo Game > Quick Setup > Game Utilities) and look at the "DebugSpawnItem"" script component.
+       Run the demo and set your item to the specified item field. Click the "Spawn Item" checkbox, then open the player's inv
+       (default hotkey is 'i'). 
+     
+     - Your object should've spawned in if it was created properly (& wasn't too big). You can pick it
+       up and rotate it and see how it looks/fits/sounds. 
+     
+     - If the player's inv starts too small, stop the game and resize the inventory by going to (Demo Game > Quick Setup > 
+       Ui > Canvas > InvContainers > Player Inventory > GridArea > Grid) and editing the Container Size property of the 
+       "InvGrid" script component.
+
+
+
+> Creating a custom Ui grid window
+  - You can create a custom Ui by building off of the GridArea prefab (dts_Inventory > Prefabs > Grid > GridArea).
+    You don't need to make changes to anything in the GridArea prefab (aside from the invWindow reference) unless 
+    you know you're doing something very particular. Don't forget to attach an InvWindow component to the top-most 
+    parent element of your built Ui and connect the grid & invWindow references to eachother, unless you're building
+    your own system to manage your Ui.
+
+
+
+
+> Adding/Removing items to inventories
+  - For adding items, you have options:
+    1) Add an amount of items to a specific position: 
+       _myGridReference.AddItem(itemData, amount, position, rotation, suppressOnChangedEvent = false)
+    2) Add an amount of items anywhere: 
+       _myGridReference.AddItem( itemData, amount, suppressOnCHangedEvent = false);
+
+  - For Removing items, you also have options:
+    1) Remove an amount of items from a specific position:
+       _myGridReference.RemoveItem(position, amount, suppressOnChangedEvent = false)
+    2) Remove an amount of items from anywhere:
+       _myGridReference.RemoveItem(itemCode (or itemData), amount, suppressOnChangedEvent = false)
+
+  - Regardless of what you're doing, all you need is the reference to the grid you're operating on and the 
+    Itemdata of what you're target item is (& position if applicable) to execute your operation.
+
+    Operations may fail if not enough space is available (for add operations) or the requested items don't exist
+    (remove operations). They may also fail if the provided ItemData isn't valid, or if the selected space is
+    already occupied (for adding) or contains nothing (for removing).
+    All add/remove operations return a bool to tell you if the operation succeeded or failed.
+
+    The static ItemCreatorHelper tool can help you look up itemDatas from itemCodes, and can also help you
+    create new item objects. You don't need to build them from scratch. The build-in Add/Remove utils do
+    exacly this.
+
+  - Adding and removing from grids also raise special events that can be listened to:
+    > OnContentsChanged( update )
+    > OnBulkContentsChanged( List<update> )
+
+    When a single operation occurs, if 'suppressOnChangedEvent' is NOT true, then the grid invokes the OnContentsChanged
+    event, passing the following data to any listeners:
+      
+      > public InvContentsUpdate        - this is a publicly accessible struct -
+        - public InvOperation operation (enum: either InvOperation.None, InvOperation.Add, or InvOperation.Remove)
+        - public ItemData itemData      (the specified itemData targeted)
+        - public int amount             (the amount added/removed)
+
+    Anything you build can listen for these events and react based on the changes of the specified grid.
+    
+    If you need to do many separate add/remove operations yet have them treated as a single event, you 
+    can run the operations you need as supressed (set suppress to true), then force the "OnBulkContentsChanged" event 
+    by calling _mygridReference.ForceRaiseBulkInvContentsChanged(...) where "..." is the list of your supressed operations.
+
+
+> Changing The Input System/ Bindings
+  - Here's the following hardcoded bindings along with their associsated functions
+     > WASD / Arrow Keys : (Camera/Inventory Movement)
+     > Enter : (Confirm Selection)
+     > Esc : (Back/Close Window)
+     > Tab : (Jump Windows)
+     > Q/E : (Camera/Item rotataion)
+     > i : (open/close player inventory)
+     > r : (rename focused container)
+     > LShift : (input modifier (hold for alternate interactions))
+     > LAlt : (input modifier (hold to show hover tooltips))
+     > Lctrl : (input modifier (hold for alternate interactions))
+     > Lclick : (Move to position or Select Ui)
+     > RClick : (Operate on half of grid items / place 1 items)
+     > MClick : (Show Context Menu on hovered item)
+
+  - It's expected that you'll want to use your own input system for detecting inputs. You can do this. The
+    InvInteracter was designed to be driven remotely, so all you need to do is implemnet your input system, then
+    bind each input to the corrresponding InvInteracter action. You should look at how the InputReader drives
+    the InvInteracter for timing and fine-tuning details.
+
+    Also, if you're implementing your own input system, don't forget to update the InputFilter. The InputFilter should
+    be able to switch on/off your inputSystem's "ignore map/player inputs" modes. 
+    
+    (The Input filter exists to support directional input alongside pointer input. Ex: when the player uses a controller, 
+    moving in inventory shouldn't move their avatar).
+
+
+> Other Questions!
+  - This manual will expand as I get more questions from users regarding fundamental use-cases.
