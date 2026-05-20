@@ -34,7 +34,7 @@ namespace dtsInventory
             itemObject.name = itemData.name;
             invItem.SetItemData(itemData);
             itemObject.GetComponent<Image>().sprite = itemData.Sprite();
-            itemRectTransform.sizeDelta = new Vector2(invItem.Width(), invItem.Height());
+            itemRectTransform.sizeDelta = new Vector2(invItem.Width()*tileWidth, invItem.Height()*tileHeight);
 
             //put the pivot position on the item's specified itemHandle cell position
             Vector2 offsetToCellCenter = new Vector2(tileWidth / 2, tileHeight / 2);
@@ -81,9 +81,10 @@ namespace dtsInventory
             //finally, normalize the previously-calculated offsetHandlePosition by the item's total size
             Vector2 itemSize = new Vector2(xCellCount * tileWidth, yCellCount * tileHeight);
             Vector2 normalizedPivotPosition = new Vector2(offsetHandlePosition.x / itemSize.x, offsetHandlePosition.y / itemSize.y);
+            Vector2 normalizedleftBottomMostCellPosition = new Vector2(xCellMinimum * tileWidth / itemSize.x, yCellMinimum * tileHeight /itemSize.y);
 
             //set the item's pivot point
-            itemRectTransform.pivot = normalizedPivotPosition;
+            itemRectTransform.pivot = normalizedPivotPosition - normalizedleftBottomMostCellPosition;
 
             //reparent the item to the itemContainer (not an inventory)
             itemRectTransform.SetParent(_itemContainer, false);

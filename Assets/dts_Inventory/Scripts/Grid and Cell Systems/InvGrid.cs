@@ -1102,7 +1102,7 @@ namespace dtsInventory
         /// is pinned, then the pointer should take responsibility for that item and pin the item to itself, in case the pointer
         /// desires to hover over a different grid (which in turn should pin that held item to that grid on entry).
         /// </summary>
-        public void PinItemToFocusedCell(InvItem item, int amount)
+        public void PinItemToFocusedCell(ItemData itemData, int amount)
         {
             if (amount < 1)
             {
@@ -1116,13 +1116,12 @@ namespace dtsInventory
                 return;
             }
 
-            if (item == null)
+            if (itemData == null)
             {
                 Debug.LogWarning("Attempted to pin a null item. Ignoring request.");
                 return;
             }
-
-            _pinnedRectTransform = item.GetComponent<RectTransform>();
+            _pinnedRectTransform = ItemCreatorHelper.CreateItem(itemData, _cellSize.x, _cellSize.y).GetComponent<RectTransform>();
             _pinnedValue = amount;
 
             //reparent the item onto the grid visually
@@ -1132,11 +1131,8 @@ namespace dtsInventory
             //parent the item to the grid's sprite container
             _pinnedRectTransform.SetParent(_pinnedItemGraphicContainer, false);
             _pinnedRectTransform.localPosition = parentCellPosition;
-
-            //ensure the sprite is of the appropriate size
-            _pinnedRectTransform.sizeDelta = new Vector2(item.Width() * _cellSize.x, item.Height() * _cellSize.y);
-
             _pinnedRectTransform.gameObject.SetActive(true);
+
             UpdateHoverGraphics();
         }
         public void RotatePinnedItemRight()
@@ -3112,7 +3108,7 @@ namespace dtsInventory
             if (_cmdPinItem)
             {
                 _cmdPinItem = false;
-                PinItemToFocusedCell(ItemCreatorHelper.CreateItem(_paramItemData, _cellSize.x, _cellSize.y).GetComponent<InvItem>(),1);
+                PinItemToFocusedCell(_paramItemData,1);
             }
         }
     }

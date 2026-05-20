@@ -76,22 +76,35 @@ namespace dtsInventory
             _spacialDefinition = newItemData.SpacialDefinition();
             _rectTransform = GetComponent<RectTransform>();
 
-            int xMinIndex = 0;
-            int yMinIndex = 0;
-            int xMaxIndex = 0;
-            int yMaxIndex = 0;
+            int xMinIndex=0;
+            int yMinIndex=0;
+            int xMaxIndex=0;
+            int yMaxIndex=0;
+            bool firstIteration = true;
 
             //find the largest and smallest x/y indexes
             foreach ((int, int) index in _spacialDefinition)
             {
-                if (index.Item1 < xMinIndex)
+                if (firstIteration)
+                {
                     xMinIndex = index.Item1;
-                if (index.Item1 > xMaxIndex)
                     xMaxIndex = index.Item1;
-                if (index.Item2 < yMinIndex)
                     yMinIndex = index.Item2;
-                if (index.Item2 > yMaxIndex)
                     yMaxIndex = index.Item2;
+                    firstIteration = false;
+                }
+                else
+                {
+                    if (index.Item1 < xMinIndex)
+                        xMinIndex = index.Item1;
+                    if (index.Item1 > xMaxIndex)
+                        xMaxIndex = index.Item1;
+                    if (index.Item2 < yMinIndex)
+                        yMinIndex = index.Item2;
+                    if (index.Item2 > yMaxIndex)
+                        yMaxIndex = index.Item2;
+                }
+                
             }
 
             //take the differences between the largest and smallest x/y (and include the starting number)

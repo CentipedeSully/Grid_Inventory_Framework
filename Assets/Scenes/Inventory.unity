@@ -648,6 +648,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7768827274837625617, guid: e744bc52345947d4d9045eacf96af78c,
         type: 3}
+      propertyPath: _paramItemData
+      value: 
+      objectReference: {fileID: 11400000, guid: 6b72718622493c742a13bbefabd1bda6,
+        type: 2}
+    - target: {fileID: 7768827274837625617, guid: e744bc52345947d4d9045eacf96af78c,
+        type: 3}
       propertyPath: _pointerContainer
       value: 
       objectReference: {fileID: 1910391120}
