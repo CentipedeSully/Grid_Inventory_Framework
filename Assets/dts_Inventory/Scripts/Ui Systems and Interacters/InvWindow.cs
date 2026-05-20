@@ -12,6 +12,7 @@ namespace dtsInventory
         [SerializeField] private RectTransform _headerRectTransform;
         [SerializeField] private RectTransform _descRectTransform;
         [SerializeField] private RectTransform _gridAreaRectTransform;
+        [SerializeField] private RectTransform _gridPreviewRectTransform;
         [SerializeField] private RectTransform _actualGridRectTransform;
         [SerializeField] private RectTransform _spritesContainerTransform;
         [SerializeField] private RectTransform _controlsAreaRectTransform;
@@ -78,12 +79,16 @@ namespace dtsInventory
 
 
         //externals
+        [ContextMenu("Update Window Size")]
         public void ResizeWindow()
         {
-            float gridWidth = _actualGridRectTransform.sizeDelta.x;
+            _gridPreviewRectTransform.GetComponent<GridPreviewVisualizer>().ResizeToMaxSize();
+
+            _rectTransform = GetComponent<RectTransform>();
+            float gridWidth = Mathf.Max(_actualGridRectTransform.sizeDelta.x, _gridPreviewRectTransform.sizeDelta.x) ;
             float headerHeight = _headerRectTransform.sizeDelta.y;
             float descHeight = _descRectTransform.sizeDelta.y;
-            float gridHeight = _actualGridRectTransform.sizeDelta.y;
+            float gridHeight = Mathf.Max(_actualGridRectTransform.sizeDelta.y, _gridPreviewRectTransform.sizeDelta.y);
             float controlsHeight = _controlsAreaRectTransform.sizeDelta.y;
             _gridAreaRectTransform.sizeDelta = new Vector2(gridWidth, gridHeight);
             _rectTransform.sizeDelta = new Vector2(gridWidth, headerHeight + descHeight + gridHeight + controlsHeight);

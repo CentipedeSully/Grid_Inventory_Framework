@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
+using static UnityEditor.Progress;
 
 
 namespace dtsInventory
@@ -118,15 +120,35 @@ namespace dtsInventory
 
         [Header("References")]
         [SerializeField] private GameObject _cellPrefab;
-        [SerializeField] private RectTransform _spritesContainer;
+        [SerializeField] private GameObject _secondaryHoverGraphicPrefab;
+        [SerializeField] private GameObject _primaryHoverGraphicPrefab;
+        [Space(20)]
         [SerializeField] private InvWindow _parentWindow;
+        [SerializeField] private RectTransform _spritesContainer;
         [SerializeField] private RectTransform _stackTextUiPrefab;
         [SerializeField] private RectTransform _activeStackTextsContainer;
         [SerializeField] private RectTransform _unusedStackTextsContainer;
         [SerializeField] private RectTransform _overlayContainer;
         [SerializeField] private RectTransform _gridDarkener;
+        [SerializeField] private RectTransform _pinnedItemGraphicContainer;
+        [SerializeField] private RectTransform _pinnedItemTextContainer;
+        [Space(20)]
+        [SerializeField] private RectTransform _pointerContainer;
 
-        [SerializeField] GridLayoutGroup _layoutGroup;
+        GridLayoutGroup _layoutGroup;
+
+
+        //Cell Navigation Utilities
+        private (int,int) _focusedCell = (-1,-1);
+        private Dictionary<(int, int), GameObject> _showingHoverGraphics = new();
+        private List<GameObject> _hoverGraphics = new();
+        private GameObject _primaryHoverGraphic;
+        private HashSet<(int, int)> _positions = new();
+        private HashSet<(int, int)> _markedHoverGraphics = new();
+        private RectTransform _pinnedRectTransform = null;
+        private int _pinnedValue = 0;
+
+
 
         //events
         public delegate void InvContentsChangedEvent(InvContentsUpdate update);
@@ -149,12 +171,17 @@ namespace dtsInventory
         [SerializeField] private Vector2Int _paramContainerModifier;
         [SerializeField] private bool _cmdExpandGrid = false;
         [SerializeField] private bool _cmdReduceGrid = false;
-        /* Tests for the StackKey Generator [obsolete]  
-        [SerializeField] private List<Vector2Int> _paramSet;
-        [SerializeField] private bool _cmdTestKeyGeneration = false;
-        [SerializeField] private string _paramPreGeneratedKey;
-        [SerializeField] private bool _cmdTestHashGeneration = false;
-        */
+        [SerializeField] private bool _cmdAddItem = false;
+        [SerializeField] private bool _cmdClearFocusedCell = false;
+        [SerializeField] private bool _cmdPinItem = false;
+
+
+        [Header("Unity Events")]
+        //public UnityEvent<InvGrid> OnGridFocused;
+        [Tooltip("Provides the previously focused cell, then the currently-focused cell when a new cell becomes focused")]
+        public UnityEvent<(int, int), (int, int)> OnCellFocused;
+        [Tooltip("Provides the last-focused cell before the focus got cleared")]
+        public UnityEvent<(int, int)> OnFocusCleared;
 
 
 
@@ -269,6 +296,8 @@ namespace dtsInventory
             _activeStackTextsContainer.sizeDelta = dynamicSize;
             _overlayContainer.sizeDelta = dynamicSize;
             _gridDarkener.sizeDelta = dynamicSize;
+            _pinnedItemGraphicContainer.sizeDelta = dynamicSize;
+            _pinnedItemTextContainer.sizeDelta = dynamicSize;
         }
         private void InitializeGrid()
         {
@@ -335,7 +364,12 @@ namespace dtsInventory
             foreach (HashSet<(int, int)> indexSet in _stackItemDatas.Keys)
             {
                 if (indexSet.Contains(position))
-                    return indexSet;
+                {
+                    HashSet<(int,int)> freshIndexSet = new HashSet<(int,int)> ();
+                    foreach ((int,int) index in indexSet)
+                        freshIndexSet.Add(index);
+                    return freshIndexSet;
+                }
             }
 
             //return an empty dataCollection if the position doesn't exist among our saved stacks
@@ -791,6 +825,330 @@ namespace dtsInventory
             uiText.localPosition = bottomRightCellPosition;
 
         }
+        private void PositionHoverGraphicOntoGrid(RectTransform graphicRectTransform, (int,int) cellPosition)
+        {
+            //reparent the graphic onto the grid visually
+            //Get the position of the hovered cell, local to the grid
+            Vector3 parentCellPosition = GetCellObject(cellPosition).GetComponent<RectTransform>().localPosition;
+
+            //parent the graphic to the grid's overlay container
+            graphicRectTransform.SetParent(_overlayContainer, false);
+            graphicRectTransform.localPosition = parentCellPosition;
+
+            //ensure the sprite is of the appropriate size
+            graphicRectTransform.sizeDelta = new Vector2(_cellSize.x, _cellSize.y);
+
+        }
+        private void UpdateHoverGraphics()
+        {
+            //ignore invalid cell positions
+            if (!IsCellOnGrid(_focusedCell))
+            {
+                Debug.LogWarning($"Failed to update hoverGraphics on position ({_focusedCell.Item1},{_focusedCell.Item2}): position doesn't exist on grid.");
+                return;
+            }
+
+            //if no primary hover graphic exists, create one
+            if (_primaryHoverGraphic == null)
+                _primaryHoverGraphic = Instantiate(_primaryHoverGraphicPrefab);
+
+            //reposition the primary hover graphic onto the focusedPosition
+            PositionHoverGraphicOntoGrid(_primaryHoverGraphic.GetComponent<RectTransform>(), _focusedCell);
+
+            //clear the temp variable
+            _hoverGraphics.Clear();
+
+            //if no item is pinned, then infer the hover effects from what's at the grid position
+            if (_pinnedRectTransform == null)
+            {
+                //if the cell isn't occupied, then clear all secondary hover effects
+                if (!IsCellOccupied(_focusedCell))
+                    ClearSecondaryHoverGraphics();
+
+                //ensure every cell of the detected item is hovered
+                else
+                {
+                    //clear the temp variables
+                    _positions.Clear();
+                    _markedHoverGraphics.Clear();
+
+                    //track all positions that the detected item occupies
+                    _positions = GetStackArea(_focusedCell);
+
+                    //mark all preexisting graphics that aren't within the item's occupancy
+                    foreach (KeyValuePair<(int, int), GameObject> entry in _showingHoverGraphics)
+                    {
+                        if (!_positions.Contains(entry.Key))
+                            _markedHoverGraphics.Add(entry.Key);
+                    }
+
+                    //remove all marked graphics
+                    foreach ((int, int) position in _markedHoverGraphics)
+                    {
+                        _hoverGraphics.Add(_showingHoverGraphics[position]);
+                        _showingHoverGraphics.Remove(position);
+                    }
+
+                    //destroy the removed graphics (later we'll pool them)
+                    while (_hoverGraphics.Count > 0)
+                    {
+                        GameObject graphic = _hoverGraphics[_hoverGraphics.Count - 1];
+                        _hoverGraphics.Remove(graphic);
+                        Destroy(graphic);
+                    }
+
+                    //create new graphics for every position the item occupies [that doesn't yet have an associated graphic]
+                    foreach ((int, int) position in _positions)
+                    {
+                        if (!_showingHoverGraphics.ContainsKey(position))
+                        {
+                            GameObject newGraphic = Instantiate(_secondaryHoverGraphicPrefab);
+                            _showingHoverGraphics.Add(position, newGraphic);
+
+                            //place the new graphic at it's respective cell position in the overlay layer
+                            PositionHoverGraphicOntoGrid(newGraphic.GetComponent<RectTransform>(), position);
+                        }
+                    }
+                }
+            }
+
+            //otherwise, always show the potential placement area for the pinned item [unless the area is invalid]
+            else
+            {
+                _positions.Clear();
+                InvItem pinnedItem = _pinnedRectTransform.GetComponent<InvItem>();
+                _positions = ConvertSpacialDefIntoGridArea(_focusedCell, pinnedItem.GetSpacialDefinition(), pinnedItem.ItemHandle());
+
+                //clear unnecessary graphics and add missing graphics
+                if (IsAreaWithinGrid(_positions))
+                {
+                    _markedHoverGraphics.Clear();
+
+                    //mark all preexisting graphics that aren't within the item's occupancy
+                    foreach (KeyValuePair<(int, int), GameObject> entry in _showingHoverGraphics)
+                    {
+                        if (!_positions.Contains(entry.Key))
+                            _markedHoverGraphics.Add(entry.Key);
+                    }
+
+                    //remove all marked graphics
+                    foreach ((int, int) position in _markedHoverGraphics)
+                    {
+                        _hoverGraphics.Add(_showingHoverGraphics[position]);
+                        _showingHoverGraphics.Remove(position);
+                    }
+
+                    //destroy the removed graphics (later we'll pool them)
+                    while (_hoverGraphics.Count > 0)
+                    {
+                        GameObject graphic = _hoverGraphics[_hoverGraphics.Count - 1];
+                        _hoverGraphics.Remove(graphic);
+                        Destroy(graphic);
+                    }
+
+                    //create new graphics for every position the item occupies [that doesn't yet have an associated graphic]
+                    foreach ((int, int) position in _positions)
+                    {
+                        if (!_showingHoverGraphics.ContainsKey(position))
+                        {
+                            GameObject newGraphic = Instantiate(_secondaryHoverGraphicPrefab);
+                            _showingHoverGraphics.Add(position, newGraphic);
+
+                            //place the new graphic at it's respective cell position in the overlay layer
+                            PositionHoverGraphicOntoGrid(newGraphic.GetComponent<RectTransform>(), position);
+                        }
+                    }
+                }
+                else ClearSecondaryHoverGraphics();
+            }
+
+            
+        }
+        private void ClearSecondaryHoverGraphics()
+        {
+            //Clear all secondary hover graphics
+            foreach (KeyValuePair<(int, int), GameObject> entry in _showingHoverGraphics)
+            {
+                _hoverGraphics.Add(entry.Value);
+            }
+
+            _showingHoverGraphics.Clear();
+
+            //destroy all unused graphics (later we'll pool them)
+            while (_hoverGraphics.Count > 0)
+            {
+                GameObject graphic = _hoverGraphics[_hoverGraphics.Count - 1];
+                _hoverGraphics.Remove(graphic);
+                Destroy(graphic);
+            }
+
+            
+        }
+        private void ClearPrimaryHoverGraphic()
+        {
+            //clear the primary hover graphic
+            Destroy(_primaryHoverGraphic);
+            _primaryHoverGraphic = null;
+        }
+        private void UpdatePinnedItemHoverLocation()
+        {
+            //skip this method if no pinned item exists
+            if (_pinnedRectTransform == null)
+                return;
+
+            //update the pinned item's hover location/rotation if it's still on the grid
+            if (IsCellOnGrid(_focusedCell))
+                SetItemGraphicToCellPosition(_pinnedRectTransform, _focusedCell);
+
+            //otherwise, we stopped focusing on the grid. We should return the pinned item to the pointer
+            else ReturnPinnedItemToPointer();
+        }
+        private void ReturnPinnedItemToPointer()
+        {
+            //for now, just recycle the item. We'll set this up when the pointer is revamped
+            ItemCreatorHelper.ReturnItemToCreator(_pinnedRectTransform.GetComponent<InvItem>());
+            _pinnedRectTransform = null;
+        }
+        private void SetItemGraphicToCellPosition(RectTransform itemRectTransform, (int,int) cellPosition)
+        {
+            //Get the position of the hovered cell, local to the grid
+            Vector3 parentCellPosition = GetCellObject(_focusedCell).GetComponent<RectTransform>().localPosition;
+            itemRectTransform.localPosition = parentCellPosition;
+        }
+
+
+        /// <summary>
+        /// Targets a specific cell on the grid. Displays a hover effect on grid cell (or over the item occupying the cell).
+        /// If an item is pinned, then the pinned item will hover over the focused cell's position.
+        /// </summary>
+        /// <param name="cellPosition">The position to focus on</param>
+        public void SetFocusedCell((int,int) cellPosition)
+        {
+            if (!IsCellOnGrid(cellPosition))
+            {
+                Debug.LogWarning($"Failed to focus on position ({cellPosition.Item1},{cellPosition.Item2}): position doesn't exist on grid.");
+                return;
+            }
+
+            (int, int) previousFocus = _focusedCell;
+            _focusedCell = cellPosition;
+
+            UpdatePinnedItemHoverLocation();
+            UpdateHoverGraphics();
+             
+            OnCellFocused?.Invoke(previousFocus, _focusedCell);
+        }
+        public void ClearFocusedCell()
+        {
+            //only work if we're focusing on a vaild cell
+            if (IsCellOnGrid(_focusedCell))
+            {
+                (int,int) previousFocus = _focusedCell;
+                _focusedCell = (-1, -1);
+
+                ClearSecondaryHoverGraphics();
+                ClearPrimaryHoverGraphic();
+                ReturnPinnedItemToPointer();
+
+                OnFocusCleared?.Invoke(previousFocus);
+            }
+        }
+        public void RespondToDirectionalInput(Vector2 input)
+        {
+            if (_focusedCell == (-1, -1))
+                SetFocusedCell((0, 0));
+            else
+            {
+                int xChange = 0;
+                int yChange = 0;
+
+                int newX = _focusedCell.Item1;
+                int newY = _focusedCell.Item2;
+
+                //determine our movement directions
+                if (input.x < -0.1f)
+                    xChange = -1;
+                else if (input.x > 0.1f)
+                    xChange = 1;
+
+                if (input.y < -0.1f)
+                    yChange = -1;
+                else if (input.y > 0.1f)
+                    yChange = 1;
+
+                //wrap x if we're moving out of bounds
+                if (xChange + _focusedCell.Item1 > _containerSize.x - 1) //moving too far right?
+                    newX = 0; //wrap to zero
+                else if (xChange + _focusedCell.Item1 < 0) //moving too far left?
+                    newX = _containerSize.x - 1; //wrap to the container's rightmost edge
+                else newX += xChange;
+
+                //wrap y if we're moving out of bounds
+                if (yChange + _focusedCell.Item2 > _containerSize.y - 1) //moving too far up?
+                    newY = 0; //wrap to zero
+                else if (yChange + _focusedCell.Item2 < 0) //moving too far down?
+                    newY = _containerSize.y - 1; //wrap to the container's uppermost edge
+                else newY += yChange;
+
+                
+                SetFocusedCell((newX, newY));
+
+            }
+        }
+
+        /// <summary>
+        /// Sets an item as pinned. A pinned item appears suspended over the grid's curently-focused cell (if one exists).
+        /// items should only be pinned to the grid when a focused cell exists. When a pointer leaves the grid while an item
+        /// is pinned, then the pointer should take responsibility for that item and pin the item to itself, in case the pointer
+        /// desires to hover over a different grid (which in turn should pin that held item to that grid on entry).
+        /// </summary>
+        public void PinItemToFocusedCell(InvItem item, int amount)
+        {
+            if (amount < 1)
+            {
+                Debug.LogWarning("Attempted to pin an item stack with an amount <1. Ignoring request.");
+                return;
+            }
+
+            if (!IsCellOnGrid(_focusedCell))
+            {
+                Debug.LogWarning("Attempted to pin an item stack when the focused cell isn't set. Ignoring request.");
+                return;
+            }
+
+            if (item == null)
+            {
+                Debug.LogWarning("Attempted to pin a null item. Ignoring request.");
+                return;
+            }
+
+            _pinnedRectTransform = item.GetComponent<RectTransform>();
+            _pinnedValue = amount;
+
+            //reparent the item onto the grid visually
+            //Get the position of the hovered cell, local to the grid
+            Vector3 parentCellPosition = GetCellObject(_focusedCell).GetComponent<RectTransform>().localPosition;
+
+            //parent the item to the grid's sprite container
+            _pinnedRectTransform.SetParent(_pinnedItemGraphicContainer, false);
+            _pinnedRectTransform.localPosition = parentCellPosition;
+
+            //ensure the sprite is of the appropriate size
+            _pinnedRectTransform.sizeDelta = new Vector2(item.Width() * _cellSize.x, item.Height() * _cellSize.y);
+
+            _pinnedRectTransform.gameObject.SetActive(true);
+            UpdateHoverGraphics();
+        }
+        public void RotatePinnedItemRight()
+        {
+            _pinnedRectTransform.GetComponent<InvItem>().RotateItem(RotationDirection.Clockwise);
+            UpdateHoverGraphics();
+        }
+        public void RotatePinnedItemLeft()
+        {
+            _pinnedRectTransform.GetComponent<InvItem>().RotateItem(RotationDirection.CounterClockwise);
+            UpdateHoverGraphics();
+        }
 
 
 
@@ -950,8 +1308,8 @@ namespace dtsInventory
 
         }
         public InvWindow GetParentWindow() { return _parentWindow; }
-        public Vector2 CellSize() { return _cellSize; }
-        public Vector2Int ContainerSize() { return _containerSize; }
+        public Vector2 CellSize() { return new Vector2(_cellSize.x,_cellSize.y); }
+        public Vector2Int ContainerSize() { return new Vector2Int(_containerSize.x,_containerSize.y); }
         /// <summary>
         /// Returns true if the given index lies within bounds of the grid. false otherwise.
         /// </summary>
@@ -2741,27 +3099,21 @@ namespace dtsInventory
                 ReduceGrid(_paramContainerModifier.x, _paramContainerModifier.y);
             }
 
-            /* Tests for the StackKey Generator [obsolete]  
-            if (_cmdTestKeyGeneration)
+            if (_cmdAddItem)
             {
-                _cmdTestKeyGeneration = false;
-
-                //convert the list into a hashset
-                HashSet<(int, int)> set = new();
-                foreach (Vector2Int position in _paramSet)
-                    set.Add((position.x, position.y));
-                
-                _paramPreGeneratedKey = StackKeyGenerator.ToKey(set);
+                _cmdAddItem = false;
+                AddItem(_paramItemData, 1);
             }
-
-            if (_cmdTestHashGeneration)
+            if (_cmdClearFocusedCell)
             {
-                _cmdTestHashGeneration = false;
-
-                HashSet<(int, int)> set = StackKeyGenerator.ToHash(_paramPreGeneratedKey);
-                Debug.Log($"Generated Hash: {StringifyPositions(set)}");
+                _cmdClearFocusedCell = false;
+                ClearFocusedCell();
             }
-            */
+            if (_cmdPinItem)
+            {
+                _cmdPinItem = false;
+                PinItemToFocusedCell(ItemCreatorHelper.CreateItem(_paramItemData, _cellSize.x, _cellSize.y).GetComponent<InvItem>(),1);
+            }
         }
     }
 }

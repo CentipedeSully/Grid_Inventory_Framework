@@ -60,6 +60,7 @@ namespace dtsInventory
             // return true if the image is dark, or is currently darkening
             return (_darkenEffectImage.color.a == _maxDarkness) || (_isDarkenInProgress && _targetDarknessValue == _maxDarkness);
         }
+
         public void DarkenMenu()
         {
             //ignore command if the grid is already dark

@@ -193,7 +193,7 @@ namespace dtsInventory
             {
                 VisualizeHover();
             }
-            UpdateContainerHoverText();
+            //UpdateContainerHoverText();
         }
 
 

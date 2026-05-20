@@ -43,10 +43,6 @@ namespace dtsInventory
         private bool _isCoolingDownPointer= false;
         private bool _isCoolingDownDirectional= false;
 
-        [Header("Demo-related utilities")]
-        [SerializeField] private MapPointer _mapPointer;
-        [SerializeField] private CameraController _camControlller;
-
         [Header("Detected Pointer Inputs")]
         [SerializeField] private bool _pointerActivityDetected = false;
         [SerializeField] private bool _lClick = false;
@@ -91,20 +87,8 @@ namespace dtsInventory
         }
         private void Update()
         {
-            
             ListenForPointerInput();
             ListenForKeyboardCommands();
-
-            if (_invInteracter!=null)
-                ShareInputsWithInvInteracter();
-
-            if (InputFilter.AllowNonUiInput() == true)
-            {
-                if (Input.mousePresent)
-                    ShareInputsWithMapPointer();
-
-                ShareInputsWithCamController();
-            }
         }
 
 
@@ -282,6 +266,7 @@ namespace dtsInventory
 
         }
 
+        /*
         private void ShareInputsWithMapPointer()
         {
             if (_lClick)
@@ -303,6 +288,7 @@ namespace dtsInventory
             else
                 _camControlller.SetCamControls(_leftCmd, _rightCmd, _upCmd, _downCmd, _lRotateHold, _rRotateHold, _scrollDelta);
         }
+        */
 
 
         //externals

@@ -42,7 +42,7 @@ With the overall problem defined. Lets state the solution simply now to better e
 
 
 =============== Approaching this Framework =================
-So, here are the a few important considerations you should keep in mind as a user about how to use this toolkit: 
+So, here are the a couple important considerations you should keep in mind as a user about how to use this toolkit: 
    1) This is a GRID INVENTORY framework.
       - I know there's a lot going on here in this package. I built an entire ui window management system for
         the sake of demonstrating this InvGrid toolkit. But keep in mind that the intended usecase for this
@@ -54,28 +54,14 @@ So, here are the a few important considerations you should keep in mind as a use
         But understand that the demo scene's purpose is to demonstrate the tool's possibilities.
         What I've built for the demo may not be "complete" enough for your project's needs.
 
-        If you'd like a fleshed out, equipment-specific ui, then you'll be building that.
-        If you'd like a dedicated merchant Ui with multiple currency support, then you'll be building that.
-        If you'd like to build a save system for your containers... 
-        
-        Then I'll be building that if I can implement it in a way that serves everyone without (in return) demanding 
-        everyone's projects to assume a certain shape. 
+        With that being said, I may or may not get back to passing updates for this package. I'll prioritize fixing broken/unuseable features,
+        but expansions beyond the foundational elements here are lower priority; Busy with life stuff.
 
    2) This is my FIRST FRAMEWORK!! :D
-      - I say this with love: expect some friction.
-        I've done my best to make this tool as performant and useful as possible, but I'm still learning. 
-        So if you encounter a bug (or even worse an uncaught red error), then TELL ME!!
-        I plan on supporting this tool and maintaining it for as long as I'm healthy and able enough to do so.
+      - I apologize in advance for any lapses in documentation. Any good/frequent questions I receive I'll be sure to post here in the project itself,
+        so don't hesitate to reach out and provide feedback.
 
-   3) I'm open to ideas
-      - If you think of a feature that everyone could use (or something that just makes logical sense), then tell me.
-        I'm 100% down for making this tool more useable and accessable for everyone. 
-        
-        I'm not saying I'll implement every idea I hear, but I'll definitely listen to requests and feedback if I believe
-        it'll improve the quality of the tool.
-
+        I'd really appreciate that, actually.
 
 
 ===================== Final thoughts ======================
-This tool will change and grow over time, and I apologize in advance for any lapses in documentation.
-I'll get it together once I figure out the best way to write and present it to you.
