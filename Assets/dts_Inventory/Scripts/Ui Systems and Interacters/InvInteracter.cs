@@ -1244,7 +1244,7 @@ namespace dtsInventory
                 {
                     //update the held item utils
                     _heldItemStackCount = stackAmount;
-                    _heldItem = _invGrid.GetItemGraphicOnCell(_hoveredCellIndex);
+                    _heldItem = _invGrid.GetInvItemOnCell(_hoveredCellIndex);
 
                     //remove the stack from the inventory
                     _invGrid.RemoveItem(_hoveredCellIndex,1);
@@ -1384,7 +1384,7 @@ namespace dtsInventory
             {
                 //Debug.Log("Pickup stack Called");
                 //save the item reference
-                _heldItem = _invGrid.GetItemGraphicOnCell(_hoveredCellIndex);
+                _heldItem = _invGrid.GetInvItemOnCell(_hoveredCellIndex);
 
                 //save the amount of the item held
                 _heldItemStackCount = _invGrid.GetStackValue(_hoveredCellIndex);
@@ -1477,7 +1477,7 @@ namespace dtsInventory
                                     PlayItemDropAudio();
 
                                     //save the found item's data
-                                    InvItem newGraphic = _invGrid.GetItemGraphicOnCell(index);
+                                    InvItem newGraphic = _invGrid.GetInvItemOnCell(index);
                                     int stackSize = _invGrid.GetStackValue(index);
 
                                     //delete the currently-stored item
@@ -1551,7 +1551,7 @@ namespace dtsInventory
                         if (hoveredItemData.IsSellable())
                         {
                             //save the item's data before we remove it from the grid, in case the transaction fails
-                            InvItem itemBeingSold = _invGrid.GetItemGraphicOnCell(_hoveredCellIndex);
+                            InvItem itemBeingSold = _invGrid.GetInvItemOnCell(_hoveredCellIndex);
                             ItemRotation lastRotation = itemBeingSold.Rotation();
                             int itemStackSize = _invGrid.GetStackValue(_hoveredCellIndex);
 
@@ -1898,7 +1898,7 @@ namespace dtsInventory
             if (amount == _contextualInvGrid.GetStackValue(_contextualItemPosition))
             {
                 //save the item reference
-                _heldItem = _contextualInvGrid.GetItemGraphicOnCell(_contextualItemPosition);
+                _heldItem = _contextualInvGrid.GetInvItemOnCell(_contextualItemPosition);
 
                 //save the amount of the item held
                 _heldItemStackCount = _contextualInvGrid.GetStackValue(_contextualItemPosition);
@@ -2014,7 +2014,7 @@ namespace dtsInventory
             //Debug.Log($"Attempting to sell {amount} {_contextualInvGrid.GetStackItemData(_contextualItemPosition).Name()}(s)...");
 
             ItemData soldItem = _contextualInvGrid.GetStackItemData(_contextualItemPosition);
-            ItemRotation lastRotation = _contextualInvGrid.GetItemGraphicOnCell(_contextualItemPosition).Rotation();
+            ItemRotation lastRotation = _contextualInvGrid.GetInvItemOnCell(_contextualItemPosition).Rotation();
 
             //remove the stated amount from the contextual grid (to open up space for currency)
             _contextualInvGrid.RemoveItem(_contextualItemPosition, amount,true); //[suppress the event, if the transaction fails, we'll return it like nothing happened]

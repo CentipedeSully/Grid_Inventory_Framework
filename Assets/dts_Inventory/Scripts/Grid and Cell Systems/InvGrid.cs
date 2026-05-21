@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -131,7 +132,9 @@ namespace dtsInventory
         [SerializeField] private RectTransform _overlayContainer;
         [SerializeField] private RectTransform _gridDarkener;
         [SerializeField] private RectTransform _pinnedItemGraphicContainer;
-        [SerializeField] private RectTransform _pinnedItemTextContainer;
+        [SerializeField] private RectTransform _pinnedTextContainer;
+        [SerializeField] private RectTransform _pinnedTextRectTransform;
+        [SerializeField] private TextMeshProUGUI _pinnedText;
         [Space(20)]
         [SerializeField] private RectTransform _pointerContainer;
 
@@ -147,6 +150,11 @@ namespace dtsInventory
         private HashSet<(int, int)> _markedHoverGraphics = new();
         private RectTransform _pinnedRectTransform = null;
         private int _pinnedValue = 0;
+
+        //input utilities
+        private bool _alphaModifierPressed = false;
+        private bool _betaModifierPressed = false;
+        private bool _gammaModifierPressed = false;
 
 
 
@@ -297,7 +305,7 @@ namespace dtsInventory
             _overlayContainer.sizeDelta = dynamicSize;
             _gridDarkener.sizeDelta = dynamicSize;
             _pinnedItemGraphicContainer.sizeDelta = dynamicSize;
-            _pinnedItemTextContainer.sizeDelta = dynamicSize;
+            _pinnedTextContainer.sizeDelta = dynamicSize;
         }
         private void InitializeGrid()
         {
@@ -960,6 +968,7 @@ namespace dtsInventory
                     }
                 }
                 else ClearSecondaryHoverGraphics();
+
             }
 
             
@@ -998,7 +1007,10 @@ namespace dtsInventory
 
             //update the pinned item's hover location/rotation if it's still on the grid
             if (IsCellOnGrid(_focusedCell))
-                SetItemGraphicToCellPosition(_pinnedRectTransform, _focusedCell);
+            {
+                SetRectTransformToCellPosition(_pinnedRectTransform, _focusedCell);
+                SetRectTransformToCellPosition(_pinnedTextRectTransform, _focusedCell);
+            }
 
             //otherwise, we stopped focusing on the grid. We should return the pinned item to the pointer
             else ReturnPinnedItemToPointer();
@@ -1006,16 +1018,29 @@ namespace dtsInventory
         private void ReturnPinnedItemToPointer()
         {
             //for now, just recycle the item. We'll set this up when the pointer is revamped
-            ItemCreatorHelper.ReturnItemToCreator(_pinnedRectTransform.GetComponent<InvItem>());
-            _pinnedRectTransform = null;
+            ClearPinnedUtilities();
+            
         }
-        private void SetItemGraphicToCellPosition(RectTransform itemRectTransform, (int,int) cellPosition)
+        private void SetRectTransformToCellPosition(RectTransform itemRectTransform, (int,int) cellPosition)
         {
             //Get the position of the hovered cell, local to the grid
             Vector3 parentCellPosition = GetCellObject(_focusedCell).GetComponent<RectTransform>().localPosition;
             itemRectTransform.localPosition = parentCellPosition;
         }
-
+        private void ClearPinnedUtilities()
+        {
+            ItemCreatorHelper.ReturnItemToCreator(_pinnedRectTransform.GetComponent<InvItem>());
+            _pinnedRectTransform = null;
+            _pinnedValue = 0;
+            _pinnedTextRectTransform.gameObject.SetActive(false);
+        }
+        private void UpdatePinnedStackText()
+        {
+            _pinnedText.text = $"{_pinnedValue}";
+            if (_pinnedValue < 2)
+                _pinnedTextRectTransform.gameObject.SetActive(false);
+            else _pinnedTextRectTransform.gameObject.SetActive(true);
+        }
 
         /// <summary>
         /// Targets a specific cell on the grid. Displays a hover effect on grid cell (or over the item occupying the cell).
@@ -1097,12 +1122,14 @@ namespace dtsInventory
         }
 
         /// <summary>
-        /// Sets an item as pinned. A pinned item appears suspended over the grid's curently-focused cell (if one exists).
-        /// items should only be pinned to the grid when a focused cell exists. When a pointer leaves the grid while an item
-        /// is pinned, then the pointer should take responsibility for that item and pin the item to itself, in case the pointer
-        /// desires to hover over a different grid (which in turn should pin that held item to that grid on entry).
+        /// Sets a stack of items as pinned. A pinned stack appears suspended over the grid's curently-focused cell (if one exists).
+        /// Stacks may not be pinned if a focused cell doesn't exist. If a pointer leaves a grid while a stack of items is still pinned,
+        /// then the pointer takes responsibility for that stack and pins the stack to itself (that stack is no longer managed by the grid).
+        /// The pointer pins its held stack to the first grid it enters [if a pinned stack exists].
+        ///
+        /// Only 1 stack may be pinned at a time.
         /// </summary>
-        public void PinItemToFocusedCell(ItemData itemData, int amount)
+        public void PinStack(ItemData itemData, int amount)
         {
             if (amount < 1)
             {
@@ -1123,30 +1150,250 @@ namespace dtsInventory
             }
             _pinnedRectTransform = ItemCreatorHelper.CreateItem(itemData, _cellSize.x, _cellSize.y).GetComponent<RectTransform>();
             _pinnedValue = amount;
+            UpdatePinnedStackText();
 
-            //reparent the item onto the grid visually
-            //Get the position of the hovered cell, local to the grid
-            Vector3 parentCellPosition = GetCellObject(_focusedCell).GetComponent<RectTransform>().localPosition;
 
-            //parent the item to the grid's sprite container
+            //parent the item to the grid's pinned-items container
             _pinnedRectTransform.SetParent(_pinnedItemGraphicContainer, false);
-            _pinnedRectTransform.localPosition = parentCellPosition;
             _pinnedRectTransform.gameObject.SetActive(true);
+
+            SetRectTransformToCellPosition(_pinnedRectTransform, _focusedCell);
+            SetRectTransformToCellPosition(_pinnedTextRectTransform, _focusedCell);
 
             UpdateHoverGraphics();
         }
         public void RotatePinnedItemRight()
         {
+            if (_pinnedTextRectTransform == null)
+                return;
+
             _pinnedRectTransform.GetComponent<InvItem>().RotateItem(RotationDirection.Clockwise);
             UpdateHoverGraphics();
         }
         public void RotatePinnedItemLeft()
         {
+            if (_pinnedTextRectTransform == null)
+                return;
+
             _pinnedRectTransform.GetComponent<InvItem>().RotateItem(RotationDirection.CounterClockwise);
             UpdateHoverGraphics();
         }
+        public void PlacePinnedStack(int amountToPlace)
+        {
+            if (_pinnedRectTransform == null)
+                return;
 
+            if (amountToPlace > _pinnedValue)
+                amountToPlace = _pinnedValue;
 
+            //get the item info and placement positions
+            InvItem pinnedInvItem = _pinnedRectTransform.GetComponent<InvItem>();
+            _positions = ConvertSpacialDefIntoGridArea(_focusedCell,pinnedInvItem.GetSpacialDefinition(),pinnedInvItem.ItemHandle());
+
+            //only take the placement seriously if all positions exists within the grid
+            if (IsAreaWithinGrid(_positions))
+            {
+                //count the number of unique stacks in the placement area
+                int countedStacksInArea = CountUniqueStacksInArea(_positions);
+
+                //check how many unique stacks exists in the placement area
+                if (countedStacksInArea == 0)
+                {
+                    //no items were detected in the area. It's open for placement
+                    AddItem(pinnedInvItem.ItemData(), amountToPlace, _focusedCell,pinnedInvItem.Rotation());
+
+                    _pinnedValue -= amountToPlace;
+
+                    if (_pinnedValue == 0)
+                        ClearPinnedUtilities();
+                    else 
+                        UpdatePinnedStackText();
+                    UpdateHoverGraphics();
+                }
+
+                else if (countedStacksInArea == 1)
+                {
+                    //a single stack was detected. We have options.
+                    //we'll add to the stack if possible,
+                    //otherwise we'll swap the pinned stack with the preexisting stack
+
+                    //determine the stack's compatibility
+                    foreach((int,int)position in _positions)
+                    {
+                        if (IsCellOccupied(position))
+                        {
+                            //if the stack is compatible and if the preexisting stack has room for more items...
+                            if (GetStackItemData(position).ItemCode() == pinnedInvItem.ItemCode() && 
+                                GetStackValue(position) < pinnedInvItem.ItemData().StackLimit())
+                            {
+                                //calculate the space that's remanining
+                                int openSpace = GetStackItemData(position).StackLimit() - GetStackValue(position);
+                                int amountPlacedInStack = Mathf.Min(openSpace, amountToPlace);
+
+                                //top off the preexisting stack
+                                AddItem(pinnedInvItem.ItemData(),amountPlacedInStack,position,pinnedInvItem.Rotation());
+
+                                _pinnedValue -= amountPlacedInStack;
+
+                                //clear the pinned stack if we've placed the full amount
+                                if (_pinnedValue == 0)
+                                    ClearPinnedUtilities();
+                                else
+                                    UpdatePinnedStackText();
+
+                                UpdateHoverGraphics();
+                                break;
+                            }
+
+                            //otherwise, just swap the pinned stack with the preexisting stack [only if we're placeing the full stack down]
+                            else if (_pinnedValue == amountToPlace)
+                            {
+                                //save the old item's information
+                                //ItemData preexistingItemDataCopy = ItemCreatorHelper.CreateItem(GetStackItemData(position),_cellSize.x,_cellSize.y).GetComponent<InvItem>().ItemData();
+                                ItemData preexistingItemData = GetStackItemData(position);
+                                ItemRotation rotation = GetInvItemOnCell(position).Rotation();
+                                int preexistingValue = GetStackValue(position);
+
+                                //remove the old item
+                                RemoveItem(position,preexistingValue);
+
+                                //place the pinned item at the focused position
+                                AddItem(pinnedInvItem.ItemData(), _pinnedValue, _focusedCell, pinnedInvItem.Rotation());
+
+                                //Clear the pinned utilities
+                                ClearPinnedUtilities();
+
+                                //Pin the copy of the removed stack
+                                PinStack(preexistingItemData, preexistingValue);
+                                break;
+
+                            }
+                        }
+                    }
+                }
+
+                else if (countedStacksInArea > 1)
+                {
+                    //there are many different stacks in this area.
+                    //we can still try to find a compatible stack that can be topped off, and
+                    //we can keep attempting to top off any found compatible stacks until we run out of items to place
+                    foreach ((int, int) position in _positions)
+                    {
+                        //Debug.Log($"Many stacks detected [{countedStacksInArea}]. Checking if position ({position.Item1},{position.Item2}) is occupied.");
+
+                        if (IsCellOccupied(position))
+                        {
+                            //Debug.Log($"yes it's occupied\nStack: {StringifyPositions(GetStackArea(position))}");
+
+                            //if the stack is compatible and if the preexisting stack has room for more items...
+                            if (GetStackItemData(position).ItemCode() == pinnedInvItem.ItemCode() &&
+                                GetStackValue(position) < pinnedInvItem.ItemData().StackLimit())
+                            {
+                                //Debug.Log($"postion has a compatible stack with space available. Attempting to top the found stack off.");
+
+                                //calculate the space that's remanining
+                                int openSpace = GetStackItemData(position).StackLimit() - GetStackValue(position);
+                                //Debug.Log($"Open Space Detected: {openSpace}");
+
+                                int amountPlacedInStack = Mathf.Min(openSpace, amountToPlace);
+
+                                //top off the preexisting stack
+                                AddItem(pinnedInvItem.ItemData(), amountPlacedInStack, position, pinnedInvItem.Rotation());
+
+                                _pinnedValue -= amountPlacedInStack;
+
+                                //clear the pinned stack if we've placed the full amount
+                                if (_pinnedValue == 0)
+                                {
+                                    ClearPinnedUtilities();
+                                    break;
+                                }
+
+                                else
+                                {
+                                    //DON'T BREAK! 
+                                    //contine to find more available positions  for our items
+                                }
+
+                            }
+                        }
+                    }
+                    UpdatePinnedStackText();
+                    UpdateHoverGraphics();
+                }
+            }
+        }
+        public void PinStack(int amount)
+        {
+            //only pin the stack [at the focused position] if a valid position exists and if there isn't a preexisting pinned stack
+            if (IsCellOnGrid(_focusedCell) && _pinnedRectTransform == null)
+            {
+                if (IsCellOccupied(_focusedCell))
+                {
+                    int amountOnStack = GetStackValue(_focusedCell);
+                    if (amount > amountOnStack)
+                        amount = amountOnStack;
+                    PinStack(GetStackItemData(_focusedCell), amount);
+                    RemoveItem(_focusedCell, amount);
+
+                }
+            }
+        }
+        public void RespondToConfirmInput()
+        {
+            //Determine the confirm context: Pin or Place?
+
+            //are we pinning a stack?
+            if (_pinnedRectTransform == null)
+            {
+                //determine the maximum value possible to pickup
+                int amountOnStack = 0;
+                if (IsCellOnGrid(_focusedCell))
+                {
+                    if (IsCellOccupied(_focusedCell))
+                        amountOnStack = GetStackValue(_focusedCell);
+                    else return;
+                }
+                else return;
+
+                //alpha means pin 1
+                if (_alphaModifierPressed)
+                    PinStack(1);
+
+                //beta means pin half
+                else if (_betaModifierPressed && amountOnStack > 1)
+                    PinStack(amountOnStack / 2);
+
+                //gamma means pin all but 1
+                else if (_gammaModifierPressed && amountOnStack > 1)
+                    PinStack(amountOnStack - 1);
+
+                //otherwise pin everything 
+                else PinStack(amountOnStack);
+            }
+
+            //we're placing a stack, then
+            else
+            {
+                //alpha means place 1
+                if (_alphaModifierPressed) 
+                    PlacePinnedStack(1);
+
+                //beta means place half
+                else if (_betaModifierPressed && _pinnedValue > 1) 
+                    PlacePinnedStack(_pinnedValue / 2);
+
+                //gamma means place all but 1
+                else if (_gammaModifierPressed && _pinnedValue > 1) 
+                    PlacePinnedStack(_pinnedValue - 1);
+
+                //otherwise place everything 
+                else PlacePinnedStack(_pinnedValue);
+            }
+        }
+        public void ReadAlphaModifierInput(bool input) { _alphaModifierPressed = input; }
+        public void ReadBetaModifierInput(bool input) { _betaModifierPressed = input; }
+        public void ReadGammaModifierInput(bool input) { _gammaModifierPressed = input; }
 
 
 
@@ -1406,7 +1653,7 @@ namespace dtsInventory
         /// </summary>
         /// <param name="index">The cell position of the invItem (sprite) you're looking for</param>
         /// <returns>The InvItem reference that is correlated to the given cell, or null if none exist</returns>
-        public InvItem GetItemGraphicOnCell((int, int) index)
+        public InvItem GetInvItemOnCell((int, int) index)
         {
             if (IsCellOnGrid(index))
             {
@@ -1424,7 +1671,7 @@ namespace dtsInventory
         /// <returns>The InvItem reference that is correlated to the given cell, or null if none exist</returns>
         public InvItem GetItemGraphicOnCell(int x, int y)
         {
-            return GetItemGraphicOnCell((x, y));
+            return GetInvItemOnCell((x, y));
         }
         /// <summary>
         /// Returns the size of the stack that is detected on the provided position.
@@ -1521,21 +1768,17 @@ namespace dtsInventory
 
 
             //Save each found stack definition into a set. For convenient uniqueness checking
-            HashSet<HashSet<(int, int)>> uniqueStacks = new();
+            //HashSet<HashSet<(int, int)>> uniqueStacks = new();
+            HashSet<string> uniqueStacks = new();
             string positionSets = "";
-            string position = "";
             foreach ((int, int) index in gridPositions)
             {
                 HashSet<(int, int)> stackArea = StackArea(index);
                 if (stackArea.Count > 0)
-                    uniqueStacks.Add(stackArea);
+                    uniqueStacks.Add(StringifyPositions(stackArea));
 
-                position = "";
 
-                foreach ((int, int) cell in stackArea)
-                    position += $"({cell.Item1},{cell.Item2}), ";
-
-                positionSets += $"{position}\n";
+                positionSets += $"{StringifyPositions(stackArea)}\n";
 
             }
 
@@ -3108,7 +3351,7 @@ namespace dtsInventory
             if (_cmdPinItem)
             {
                 _cmdPinItem = false;
-                PinItemToFocusedCell(_paramItemData,1);
+                PinStack(_paramItemData,_paramItemCount);
             }
         }
     }
