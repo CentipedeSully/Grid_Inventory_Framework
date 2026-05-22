@@ -64,14 +64,14 @@ namespace dtsInventory
         [Header("Unity Events: Directional")]
         public UnityEvent OnDirectionalActivityDetected;
         public UnityEvent<Vector2> OnDirectionalInput;
-        public UnityEvent OnLrotate;
-        public UnityEvent OnRrotate;
+        public UnityEvent OnLeftAction;
+        public UnityEvent OnRightAction;
         public UnityEvent OnConfirm;
         public UnityEvent OnBack;
 
         [Header("Unity Events: Special Hotkeys")]
-        public UnityEvent OnJumpToOtherGridHotkey;
-        public UnityEvent OnEditInputFieldHotkey;
+        public UnityEvent OnJumpElementsHotkey;
+        public UnityEvent OnEditHotkey;
         public UnityEvent OnInventoryHotkey;
 
         [Header("Unity Events: Input Modifiers")]
@@ -212,9 +212,9 @@ namespace dtsInventory
 
 
             if (_lRotate)
-                OnLrotate?.Invoke();
+                OnLeftAction?.Invoke();
             if (_rRotate)
-                OnRrotate?.Invoke();
+                OnRightAction?.Invoke();
 
 
             if (_confirm)
@@ -224,10 +224,10 @@ namespace dtsInventory
 
 
             if (_jumpWindow)
-                OnJumpToOtherGridHotkey?.Invoke();
+                OnJumpElementsHotkey?.Invoke();
 
             if (_editInputFieldCmd)
-                OnEditInputFieldHotkey?.Invoke();
+                OnEditHotkey?.Invoke();
 
             if (_inventoryCmd)
                 OnInventoryHotkey?.Invoke();

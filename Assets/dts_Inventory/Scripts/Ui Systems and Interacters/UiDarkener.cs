@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +9,7 @@ namespace dtsInventory
 {
     public class UiDarkener : MonoBehaviour
     {
+        [SerializeField] private bool _darkenOnStart = false;
         [SerializeField] private Image _darkenEffectImage;
         [SerializeField] private float _darkenDuration;
         [SerializeField] private float _maxDarkness;
@@ -17,11 +19,11 @@ namespace dtsInventory
         private float _targetDarknessValue;
         private float _startingDarknessValue;
 
-
-        private void Awake()
+        private void Start()
         {
-
-            _darkenEffectImage.gameObject.SetActive(false);
+            if (_darkenOnStart)
+                DarkenMenu();
+            else UndarkenMenu();
         }
 
         private void Update()

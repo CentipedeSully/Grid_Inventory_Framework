@@ -11,68 +11,6 @@ using static UnityEditor.Progress;
 
 namespace dtsInventory
 {
-    /* StackKey Generator, [obsolete] 
-    public static class StackKeyGenerator
-    {
-        public static string ToKey(HashSet<(int,int)> set)
-        {
-            if (set == null)
-                return "";
-
-            if (set.Count == 0)
-                return "";
-
-            List<(int, int)> list = set.ToList().OrderBy((t) => t.Item1).ThenBy((t)=>t.Item2).ToList();
-
-            
-            string key = "";
-
-            for (int i =0; i < list.Count(); i++)
-                key += $"{list[i].Item1},{list[i].Item2} "; //space is the delimiter
-
-            return key;
-
-        }
-
-        public static HashSet<(int,int)> ToHash(string key)
-        {
-            if (key == "")
-                return new();
-
-            string[] array = key.Trim().Split(' ');
-
-            if (array.Length == 0)
-            {
-                Debug.LogWarning($"Attempted to GenerateHash from an unsupported key [{key}]. " +
-                    $"Only attempt to Generate Hashes from keys that this utility creates.");
-                return new();
-            }
-
-            HashSet<(int, int)> set = new();
-
-            try
-            {
-                
-                //remove the element at the end
-                foreach (string s in array)
-                {
-                    string[] items = s.Split(',');
-                    set.Add( (int.Parse(items[0]), int.Parse(items[1])) );
-                }
-
-                return set;
-            }
-            catch (Exception)
-            {
-                Debug.LogWarning($"Attempted to GenerateHash from an unsupported key [{key}]. " +
-                    $"Only attempt to Generate Hashes from keys that this utility creates.");
-                return new();
-            }
-            
-
-
-        }
-    }*/
 
     public enum InvOperation
     {
@@ -95,7 +33,7 @@ namespace dtsInventory
         }
     }
 
-    public class InvGrid : MonoBehaviour
+    public class InvGrid : MonoBehaviour, ILayoutSubcomponent
     {
         [Header("Settings")]
         [SerializeField] private Vector2Int _containerSize;
@@ -139,6 +77,7 @@ namespace dtsInventory
         [SerializeField] private RectTransform _pointerContainer;
 
         GridLayoutGroup _layoutGroup;
+        LayoutManager _layoutManager;
 
 
         //Cell Navigation Utilities
@@ -185,7 +124,9 @@ namespace dtsInventory
 
 
         [Header("Unity Events")]
-        //public UnityEvent<InvGrid> OnGridFocused;
+        public UnityEvent<ILayoutSubcomponent> OnSubcomponentActivated;
+        public UnityEvent<ILayoutSubcomponent> OnSubcomponentDeactivated;
+        public UnityEvent OnSubcomponentReset;
         [Tooltip("Provides the previously focused cell, then the currently-focused cell when a new cell becomes focused")]
         public UnityEvent<(int, int), (int, int)> OnCellFocused;
         [Tooltip("Provides the last-focused cell before the focus got cleared")]
@@ -1029,6 +970,9 @@ namespace dtsInventory
         }
         private void ClearPinnedUtilities()
         {
+            if (_pinnedRectTransform == null)
+                return;
+
             ItemCreatorHelper.ReturnItemToCreator(_pinnedRectTransform.GetComponent<InvItem>());
             _pinnedRectTransform = null;
             _pinnedValue = 0;
@@ -1395,7 +1339,7 @@ namespace dtsInventory
         public void ReadBetaModifierInput(bool input) { _betaModifierPressed = input; }
         public void ReadGammaModifierInput(bool input) { _gammaModifierPressed = input; }
 
-
+        
 
         //externals
         /// <summary>
@@ -3354,6 +3298,68 @@ namespace dtsInventory
                 PinStack(_paramItemData,_paramItemCount);
             }
         }
+
+        public GameObject GetGameObject()
+        {
+            return gameObject;
+        }
+
+        public void ActivateSubcomponent(ILayoutSubcomponent self)
+        {
+            OnSubcomponentActivated?.Invoke(this);
+        }
+
+        public void DeactivateSubcomponent(ILayoutSubcomponent self)
+        {
+            OnSubcomponentDeactivated?.Invoke(this);
+        }
+        public void ResetSubcomponent(ILayoutSubcomponent self)
+        {
+            OnSubcomponentReset?.Invoke();
+        }
+
+        public void RespondToLeftAction()
+        {
+            RotatePinnedItemLeft();
+        }
+
+        public void RespondToRightAction()
+        {
+            RotatePinnedItemRight();
+        }
+
+        public void RespondToCancelInput()
+        {
+            if (_pinnedRectTransform == null)
+                DeactivateSubcomponent(this);
+        }
+
+        public void RespondToJumpHotkey()
+        {
+            Debug.Log("Grid Detected jumpElement input");
+        }
+
+        public void RespondToEditHotkey()
+        {
+            Debug.Log("Grid Detected Edit input");
+        }
+
+        public void ReadAlphaInput(bool input)
+        {
+            ReadAlphaModifierInput(input);
+        }
+
+        public void ReadBetaInput(bool input)
+        {
+            ReadBetaModifierInput(input);
+        }
+
+        public void ReadGammaInput(bool input)
+        {
+            ReadGammaModifierInput(input);
+        }
+
+        
     }
 }
 
