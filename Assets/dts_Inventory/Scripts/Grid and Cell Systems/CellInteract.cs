@@ -26,19 +26,21 @@ namespace dtsInventory
         //Interface
         public void OnPointerEnter(PointerEventData eventData)
         {
+            /*
             if (_grid != null && !InvManagerHelper.IsInvSystemLocked())
             {
                 InvManagerHelper.SetHoveredCell(this);
                 InvManagerHelper.BringWindowToFront(_grid.GetParentWindow());
-            }
+            }*/
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            /*
             if (_grid != null && !InvManagerHelper.IsInvSystemLocked())
             {
                 InvManagerHelper.ClearHoveredCell(this);
-            }
+            }*/
         }
 
 

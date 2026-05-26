@@ -3284,10 +3284,11 @@ namespace dtsInventory
         public static InvInteracter GetInvController() { return _invController; }
         public static void SetActiveItemGrid(InvGrid newGrid) 
         { 
-            _invController.SetActiveItemGrid(newGrid);
+            if (_invController != null)
+                _invController.SetActiveItemGrid(newGrid);
         }
         public static void BringWindowToFront(InvWindow window) {_invController.SetWindowToFront(window);}
-        public static void LeaveGrid(InvGrid gridToLeave) { _invController.LeaveGrid(gridToLeave); }
+        public static void LeaveGrid(InvGrid gridToLeave) { _invController?.LeaveGrid(gridToLeave); }
         public static void SetHoveredCell(CellInteract cell) { _invController.SetHoveredCell(cell);  }
         public static void ClearHoveredCell(CellInteract cell) { _invController.ClearHoveredCell(cell); }
         public static void TrackNewInvWindow(InvWindow window) { if (!_invController.IsWindowBeingTracked(window)) _invController.TrackInvWindow(window); }

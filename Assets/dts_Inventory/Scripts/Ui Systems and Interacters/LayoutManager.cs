@@ -67,14 +67,14 @@ namespace dtsInventory
         {
             if (!_isLayoutShowing)
             {
-                Debug.Log("Showing Inv");
+                //Debug.Log("Showing Inv");
                 _isLayoutShowing = true;
                 OnShowTriggered?.Invoke(null);
             }
                 
             else
             {
-                Debug.Log("Hiding Inv");
+                //Debug.Log("Hiding Inv");
                 _isLayoutShowing = false;
                 OnHideTriggered?.Invoke(null);
             }
