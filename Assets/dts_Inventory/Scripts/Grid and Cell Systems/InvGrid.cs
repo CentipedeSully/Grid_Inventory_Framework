@@ -5,6 +5,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using static UnityEditor.Progress;
 
@@ -33,7 +34,7 @@ namespace dtsInventory
         }
     }
 
-    public class InvGrid : MonoBehaviour, ILayoutSubcomponent
+    public class InvGrid : MonoBehaviour, IGridUiElement
     {
         [Header("Settings")]
         [SerializeField] private Vector2Int _containerSize;
@@ -46,15 +47,6 @@ namespace dtsInventory
         [Tooltip("Blocks items from showing the 'Sell' context option while within this inventory. " +
             "Sell only shows up if both 1) another merchant's invetory is open and 2) the item is sellable.")]
         [SerializeField] private bool _canSellFromThisInv = true;
-        [SerializeField] private float _darkenDuration;
-        [Range(0,1)][SerializeField] private float _maxDarkness;
-        private float _currentDarkenTime;
-        private bool _isDarkenInProgress = false;
-        private float _startingDarknessValue;
-        private float _targetDarknessValue;
-        private Image _darkenEffectImage;
-        private float _originalAlpha;
-        private float _alpha;
         private IEnumerator _textUpdater;
 
         [Header("References")]
@@ -68,7 +60,7 @@ namespace dtsInventory
         [SerializeField] private RectTransform _activeStackTextsContainer;
         [SerializeField] private RectTransform _unusedStackTextsContainer;
         [SerializeField] private RectTransform _overlayContainer;
-        [SerializeField] private RectTransform _gridDarkener;
+        [SerializeField] private RectTransform _vfxOverlay;
         [SerializeField] private RectTransform _pinnedItemGraphicContainer;
         [SerializeField] private RectTransform _pinnedTextContainer;
         [SerializeField] private RectTransform _pinnedTextRectTransform;
@@ -77,11 +69,11 @@ namespace dtsInventory
         [SerializeField] private RectTransform _pointerContainer;
 
         GridLayoutGroup _layoutGroup;
-        LayoutManager _layoutManager;
+        GridInventoryManager _layoutManager;
 
 
         //Cell Navigation Utilities
-        private (int,int) _focusedCell = (-1,-1);
+        private (int,int) _hoveredCell = (-1,-1);
         private Dictionary<(int, int), GameObject> _showingHoverGraphics = new();
         private List<GameObject> _hoverGraphics = new();
         private GameObject _primaryHoverGraphic;
@@ -113,8 +105,6 @@ namespace dtsInventory
         [SerializeField] private bool _cmdCheckIfSpaceExists = false;
         [SerializeField] private List<ItemQuery> _paramQueryList;
         [SerializeField] private bool _cmdMulticheckIfSpaceExists = false;
-        [SerializeField] private bool _cmdDarkenGrid = false;
-        [SerializeField] private bool _cmdUndarkenGrid = false;
         [SerializeField] private Vector2Int _paramContainerModifier;
         [SerializeField] private bool _cmdExpandGrid = false;
         [SerializeField] private bool _cmdReduceGrid = false;
@@ -124,13 +114,16 @@ namespace dtsInventory
 
 
         [Header("Unity Events")]
-        public UnityEvent<ILayoutSubcomponent> OnSubcomponentActivated;
-        public UnityEvent<ILayoutSubcomponent> OnSubcomponentDeactivated;
-        public UnityEvent OnSubcomponentReset;
-        [Tooltip("Provides the previously focused cell, then the currently-focused cell when a new cell becomes focused")]
-        public UnityEvent<(int, int), (int, int)> OnCellFocused;
-        [Tooltip("Provides the last-focused cell before the focus got cleared")]
-        public UnityEvent<(int, int)> OnFocusCleared;
+        [Tooltip("Whenever the Inventory Manager has 'activated' this grid, this event is raised. Activated subcomponents all reive")]
+        public UnityEvent OnGridFocused;
+        public UnityEvent OnGridUnfocused;
+        public UnityEvent OnGridShown;
+        public UnityEvent OnGridHidden;
+        public UnityEvent<InvGrid, (int, int)> OnCellHovered;
+        public UnityEvent<InvGrid> OnHoveredCellCleared;
+        public UnityEvent <HashSet<ContextOption>,(int,int),InvGrid> OnContextMenuRequested;
+        public UnityEvent OnStackPinned;
+        public UnityEvent OnPinnedStackLost;
 
 
 
@@ -213,8 +206,6 @@ namespace dtsInventory
 
             //Resize the UiWindow.
             ResizeContainer();
-            _darkenEffectImage = _gridDarkener.GetComponent<Image>();
-            _originalAlpha = _darkenEffectImage.color.a;
 
         }
 
@@ -225,8 +216,6 @@ namespace dtsInventory
 
         private void Update()
         {
-            if (_isDarkenInProgress)
-                UpdateDarkeningEffects();
             if (_isDebugActive)
                 ListenForDebugCommands();
         }
@@ -244,9 +233,9 @@ namespace dtsInventory
             _spritesContainer.sizeDelta = dynamicSize;
             _activeStackTextsContainer.sizeDelta = dynamicSize;
             _overlayContainer.sizeDelta = dynamicSize;
-            _gridDarkener.sizeDelta = dynamicSize;
             _pinnedItemGraphicContainer.sizeDelta = dynamicSize;
             _pinnedTextContainer.sizeDelta = dynamicSize;
+            _vfxOverlay.sizeDelta = dynamicSize;
         }
         private void InitializeGrid()
         {
@@ -280,20 +269,6 @@ namespace dtsInventory
             Transform unusedItemsContainer = ItemCreatorHelper.GetUiItemsContainer();
 
             item.GetComponent<RectTransform>().SetParent(unusedItemsContainer, false);
-        }
-        private void UpdateDarkeningEffects()
-        {
-            if (_darkenEffectImage.color.a == _targetDarknessValue)
-            {
-                _isDarkenInProgress = false;
-                _currentDarkenTime = 0;
-            }
-            else
-            {
-                _currentDarkenTime += Time.deltaTime;
-                _alpha = Mathf.Lerp(_startingDarknessValue, _targetDarknessValue, _currentDarkenTime / _darkenDuration);
-                _darkenEffectImage.color = new Color(_darkenEffectImage.color.r, _darkenEffectImage.color.g, _darkenEffectImage.color.b, _alpha);
-            }
         }
 
 
@@ -791,9 +766,9 @@ namespace dtsInventory
         private void UpdateHoverGraphics()
         {
             //ignore invalid cell positions
-            if (!IsCellOnGrid(_focusedCell))
+            if (!IsCellOnGrid(_hoveredCell))
             {
-                Debug.LogWarning($"Failed to update hoverGraphics on position ({_focusedCell.Item1},{_focusedCell.Item2}): position doesn't exist on grid.");
+                Debug.LogWarning($"Failed to update hoverGraphics on position ({_hoveredCell.Item1},{_hoveredCell.Item2}): position doesn't exist on grid.");
                 return;
             }
 
@@ -802,7 +777,7 @@ namespace dtsInventory
                 _primaryHoverGraphic = Instantiate(_primaryHoverGraphicPrefab);
 
             //reposition the primary hover graphic onto the focusedPosition
-            PositionHoverGraphicOntoGrid(_primaryHoverGraphic.GetComponent<RectTransform>(), _focusedCell);
+            PositionHoverGraphicOntoGrid(_primaryHoverGraphic.GetComponent<RectTransform>(), _hoveredCell);
 
             //clear the temp variable
             _hoverGraphics.Clear();
@@ -811,7 +786,7 @@ namespace dtsInventory
             if (_pinnedRectTransform == null)
             {
                 //if the cell isn't occupied, then clear all secondary hover effects
-                if (!IsCellOccupied(_focusedCell))
+                if (!IsCellOccupied(_hoveredCell))
                     ClearSecondaryHoverGraphics();
 
                 //ensure every cell of the detected item is hovered
@@ -822,7 +797,7 @@ namespace dtsInventory
                     _markedHoverGraphics.Clear();
 
                     //track all positions that the detected item occupies
-                    _positions = GetStackArea(_focusedCell);
+                    _positions = GetStackArea(_hoveredCell);
 
                     //mark all preexisting graphics that aren't within the item's occupancy
                     foreach (KeyValuePair<(int, int), GameObject> entry in _showingHoverGraphics)
@@ -866,7 +841,7 @@ namespace dtsInventory
             {
                 _positions.Clear();
                 InvItem pinnedItem = _pinnedRectTransform.GetComponent<InvItem>();
-                _positions = ConvertSpacialDefIntoGridArea(_focusedCell, pinnedItem.GetSpacialDefinition(), pinnedItem.ItemHandle());
+                _positions = ConvertSpacialDefIntoGridArea(_hoveredCell, pinnedItem.GetSpacialDefinition(), pinnedItem.ItemHandle());
 
                 //clear unnecessary graphics and add missing graphics
                 if (IsAreaWithinGrid(_positions))
@@ -947,10 +922,10 @@ namespace dtsInventory
                 return;
 
             //update the pinned item's hover location/rotation if it's still on the grid
-            if (IsCellOnGrid(_focusedCell))
+            if (IsCellOnGrid(_hoveredCell))
             {
-                SetRectTransformToCellPosition(_pinnedRectTransform, _focusedCell);
-                SetRectTransformToCellPosition(_pinnedTextRectTransform, _focusedCell);
+                SetRectTransformToCellPosition(_pinnedRectTransform, _hoveredCell);
+                SetRectTransformToCellPosition(_pinnedTextRectTransform, _hoveredCell);
             }
 
             //otherwise, we stopped focusing on the grid. We should return the pinned item to the pointer
@@ -965,7 +940,7 @@ namespace dtsInventory
         private void SetRectTransformToCellPosition(RectTransform itemRectTransform, (int,int) cellPosition)
         {
             //Get the position of the hovered cell, local to the grid
-            Vector3 parentCellPosition = GetCellObject(_focusedCell).GetComponent<RectTransform>().localPosition;
+            Vector3 parentCellPosition = GetCellObject(_hoveredCell).GetComponent<RectTransform>().localPosition;
             itemRectTransform.localPosition = parentCellPosition;
         }
         private void ClearPinnedUtilities()
@@ -977,6 +952,8 @@ namespace dtsInventory
             _pinnedRectTransform = null;
             _pinnedValue = 0;
             _pinnedTextRectTransform.gameObject.SetActive(false);
+
+            OnPinnedStackLost?.Invoke();
         }
         private void UpdatePinnedStackText()
         {
@@ -986,12 +963,14 @@ namespace dtsInventory
             else _pinnedTextRectTransform.gameObject.SetActive(true);
         }
 
+
+        
         /// <summary>
         /// Targets a specific cell on the grid. Displays a hover effect on grid cell (or over the item occupying the cell).
         /// If an item is pinned, then the pinned item will hover over the focused cell's position.
         /// </summary>
         /// <param name="cellPosition">The position to focus on</param>
-        public void SetFocusedCell((int,int) cellPosition)
+        public void SetHoveredCell((int,int) cellPosition)
         {
             if (!IsCellOnGrid(cellPosition))
             {
@@ -999,40 +978,40 @@ namespace dtsInventory
                 return;
             }
 
-            (int, int) previousFocus = _focusedCell;
-            _focusedCell = cellPosition;
+            (int, int) previousHover = _hoveredCell;
+            _hoveredCell = cellPosition;
 
             UpdatePinnedItemHoverLocation();
             UpdateHoverGraphics();
-             
-            OnCellFocused?.Invoke(previousFocus, _focusedCell);
+
+            OnCellHovered?.Invoke(this, _hoveredCell);
         }
-        public void ClearFocusedCell()
+        public void ClearHoveredCell()
         {
             //only work if we're focusing on a vaild cell
-            if (IsCellOnGrid(_focusedCell))
+            if (IsCellOnGrid(_hoveredCell))
             {
-                (int,int) previousFocus = _focusedCell;
-                _focusedCell = (-1, -1);
+                (int,int) previousFocus = _hoveredCell;
+                _hoveredCell = (-1, -1);
 
                 ClearSecondaryHoverGraphics();
                 ClearPrimaryHoverGraphic();
                 ReturnPinnedItemToPointer();
 
-                OnFocusCleared?.Invoke(previousFocus);
+                OnHoveredCellCleared?.Invoke(this);
             }
         }
-        public void RespondToDirectionalInput(Vector2 input)
+        public void RespondToPrimaryDirectionalInput(Vector2 input)
         {
-            if (_focusedCell == (-1, -1))
-                SetFocusedCell((0, 0));
+            if (_hoveredCell == (-1, -1))
+                SetHoveredCell((0, 0));
             else
             {
                 int xChange = 0;
                 int yChange = 0;
 
-                int newX = _focusedCell.Item1;
-                int newY = _focusedCell.Item2;
+                int newX = _hoveredCell.Item1;
+                int newY = _hoveredCell.Item2;
 
                 //determine our movement directions
                 if (input.x < -0.1f)
@@ -1046,21 +1025,21 @@ namespace dtsInventory
                     yChange = 1;
 
                 //wrap x if we're moving out of bounds
-                if (xChange + _focusedCell.Item1 > _containerSize.x - 1) //moving too far right?
+                if (xChange + _hoveredCell.Item1 > _containerSize.x - 1) //moving too far right?
                     newX = 0; //wrap to zero
-                else if (xChange + _focusedCell.Item1 < 0) //moving too far left?
+                else if (xChange + _hoveredCell.Item1 < 0) //moving too far left?
                     newX = _containerSize.x - 1; //wrap to the container's rightmost edge
                 else newX += xChange;
 
                 //wrap y if we're moving out of bounds
-                if (yChange + _focusedCell.Item2 > _containerSize.y - 1) //moving too far up?
+                if (yChange + _hoveredCell.Item2 > _containerSize.y - 1) //moving too far up?
                     newY = 0; //wrap to zero
-                else if (yChange + _focusedCell.Item2 < 0) //moving too far down?
+                else if (yChange + _hoveredCell.Item2 < 0) //moving too far down?
                     newY = _containerSize.y - 1; //wrap to the container's uppermost edge
                 else newY += yChange;
 
                 
-                SetFocusedCell((newX, newY));
+                SetHoveredCell((newX, newY));
 
             }
         }
@@ -1081,7 +1060,7 @@ namespace dtsInventory
                 return;
             }
 
-            if (!IsCellOnGrid(_focusedCell))
+            if (!IsCellOnGrid(_hoveredCell))
             {
                 Debug.LogWarning("Attempted to pin an item stack when the focused cell isn't set. Ignoring request.");
                 return;
@@ -1101,10 +1080,11 @@ namespace dtsInventory
             _pinnedRectTransform.SetParent(_pinnedItemGraphicContainer, false);
             _pinnedRectTransform.gameObject.SetActive(true);
 
-            SetRectTransformToCellPosition(_pinnedRectTransform, _focusedCell);
-            SetRectTransformToCellPosition(_pinnedTextRectTransform, _focusedCell);
+            SetRectTransformToCellPosition(_pinnedRectTransform, _hoveredCell);
+            SetRectTransformToCellPosition(_pinnedTextRectTransform, _hoveredCell);
 
             UpdateHoverGraphics();
+            OnStackPinned?.Invoke();
         }
         public void RotatePinnedItemRight()
         {
@@ -1132,7 +1112,7 @@ namespace dtsInventory
 
             //get the item info and placement positions
             InvItem pinnedInvItem = _pinnedRectTransform.GetComponent<InvItem>();
-            _positions = ConvertSpacialDefIntoGridArea(_focusedCell,pinnedInvItem.GetSpacialDefinition(),pinnedInvItem.ItemHandle());
+            _positions = ConvertSpacialDefIntoGridArea(_hoveredCell,pinnedInvItem.GetSpacialDefinition(),pinnedInvItem.ItemHandle());
 
             //only take the placement seriously if all positions exists within the grid
             if (IsAreaWithinGrid(_positions))
@@ -1144,7 +1124,7 @@ namespace dtsInventory
                 if (countedStacksInArea == 0)
                 {
                     //no items were detected in the area. It's open for placement
-                    AddItem(pinnedInvItem.ItemData(), amountToPlace, _focusedCell,pinnedInvItem.Rotation());
+                    AddItem(pinnedInvItem.ItemData(), amountToPlace, _hoveredCell,pinnedInvItem.Rotation());
 
                     _pinnedValue -= amountToPlace;
 
@@ -1202,7 +1182,7 @@ namespace dtsInventory
                                 RemoveItem(position,preexistingValue);
 
                                 //place the pinned item at the focused position
-                                AddItem(pinnedInvItem.ItemData(), _pinnedValue, _focusedCell, pinnedInvItem.Rotation());
+                                AddItem(pinnedInvItem.ItemData(), _pinnedValue, _hoveredCell, pinnedInvItem.Rotation());
 
                                 //Clear the pinned utilities
                                 ClearPinnedUtilities();
@@ -1270,70 +1250,93 @@ namespace dtsInventory
         public void PinStack(int amount)
         {
             //only pin the stack [at the focused position] if a valid position exists and if there isn't a preexisting pinned stack
-            if (IsCellOnGrid(_focusedCell) && _pinnedRectTransform == null)
+            if (IsCellOnGrid(_hoveredCell) && _pinnedRectTransform == null)
             {
-                if (IsCellOccupied(_focusedCell))
+                if (IsCellOccupied(_hoveredCell))
                 {
-                    int amountOnStack = GetStackValue(_focusedCell);
+                    int amountOnStack = GetStackValue(_hoveredCell);
                     if (amount > amountOnStack)
                         amount = amountOnStack;
-                    PinStack(GetStackItemData(_focusedCell), amount);
-                    RemoveItem(_focusedCell, amount);
+                    PinStack(GetStackItemData(_hoveredCell), amount);
+                    RemoveItem(_hoveredCell, amount);
 
                 }
             }
         }
         public void RespondToConfirmInput()
         {
-            //Determine the confirm context: Pin or Place?
+            //ignore the input if no cell is hovered
+            if (!IsCellOnGrid(_hoveredCell))
+                return;
+ 
 
-            //are we pinning a stack?
-            if (_pinnedRectTransform == null)
+            //allow auto-management of items if alpha-select was pressed
+            if (_alphaModifierPressed)
             {
-                //determine the maximum value possible to pickup
-                int amountOnStack = 0;
-                if (IsCellOnGrid(_focusedCell))
+                //Determine the confirm context: Pin or Place?
+                //are we pinning a stack?
+                if (_pinnedRectTransform == null)
                 {
-                    if (IsCellOccupied(_focusedCell))
-                        amountOnStack = GetStackValue(_focusedCell);
+                    //determine the maximum value possible to pickup
+                    int amountOnStack = 0;
+                    if (IsCellOnGrid(_hoveredCell))
+                    {
+                        if (IsCellOccupied(_hoveredCell))
+                            amountOnStack = GetStackValue(_hoveredCell);
+                        else return;
+                    }
                     else return;
+
+                    //alpha means pin 1
+                    if (_alphaModifierPressed)
+                        PinStack(1);
+
+                    //beta means pin half
+                    else if (_betaModifierPressed && amountOnStack > 1)
+                        PinStack(amountOnStack / 2);
+
+                    //gamma means pin all but 1
+                    else if (_gammaModifierPressed && amountOnStack > 1)
+                        PinStack(amountOnStack - 1);
+
+                    //otherwise pin everything 
+                    else PinStack(amountOnStack);
                 }
-                else return;
 
-                //alpha means pin 1
-                if (_alphaModifierPressed)
-                    PinStack(1);
+                //we're placing a stack, then
+                else
+                {
+                    //alpha means place 1
+                    if (_alphaModifierPressed)
+                        PlacePinnedStack(1);
 
-                //beta means pin half
-                else if (_betaModifierPressed && amountOnStack > 1)
-                    PinStack(amountOnStack / 2);
+                    //beta means place half
+                    else if (_betaModifierPressed && _pinnedValue > 1)
+                        PlacePinnedStack(_pinnedValue / 2);
 
-                //gamma means pin all but 1
-                else if (_gammaModifierPressed && amountOnStack > 1)
-                    PinStack(amountOnStack - 1);
+                    //gamma means place all but 1
+                    else if (_gammaModifierPressed && _pinnedValue > 1)
+                        PlacePinnedStack(_pinnedValue - 1);
 
-                //otherwise pin everything 
-                else PinStack(amountOnStack);
+                    //otherwise place everything 
+                    else PlacePinnedStack(_pinnedValue);
+                }
             }
 
-            //we're placing a stack, then
-            else
+            else if (IsCellOccupied(_hoveredCell))
             {
-                //alpha means place 1
-                if (_alphaModifierPressed) 
-                    PlacePinnedStack(1);
+                //summon the context menu if the context is valid
+                if (IsCellOnGrid(_hoveredCell))
+                {
+                    //build the context
+                    HashSet<ContextOption> possibleoptions = GetStackItemData(_hoveredCell).ContextualOptions();
 
-                //beta means place half
-                else if (_betaModifierPressed && _pinnedValue > 1) 
-                    PlacePinnedStack(_pinnedValue / 2);
 
-                //gamma means place all but 1
-                else if (_gammaModifierPressed && _pinnedValue > 1) 
-                    PlacePinnedStack(_pinnedValue - 1);
-
-                //otherwise place everything 
-                else PlacePinnedStack(_pinnedValue);
+                    if (possibleoptions.Count > 0)
+                        OnContextMenuRequested?.Invoke(possibleoptions, _hoveredCell, this);
+                }
             }
+            
         }
         public void ReadAlphaModifierInput(bool input) { _alphaModifierPressed = input; }
         public void ReadBetaModifierInput(bool input) { _betaModifierPressed = input; }
@@ -1361,81 +1364,6 @@ namespace dtsInventory
         /// <param name="operationsList">A list of operations that were manually performed</param>
         public void ForceRaiseBulkInvContentsChanged(List<InvContentsUpdate> updateList) { RaiseBulkInvContentsChangeEvent(updateList); }
 
-        /// <summary>
-        /// Triggers the "Darken overlay over time" visual effect. Stops once max darkenss is reached.
-        /// </summary>
-        public void DarkenGrid()
-        {
-            //ignore command if the grid is already dark
-            if (_darkenEffectImage.color.a == _maxDarkness)
-                return;
-
-            //ignore command if we're already darkening the grid
-            if (_isDarkenInProgress && _targetDarknessValue == _maxDarkness)
-                return;
-
-            //if we're currently UNDOING a previous darkening effect, then reverse direction
-            if (_isDarkenInProgress && _targetDarknessValue == _originalAlpha)
-            {
-                //reverse our progression point
-                _currentDarkenTime = _darkenDuration - _currentDarkenTime;
-
-                //ensure our start and end points are reversed
-                _startingDarknessValue = _originalAlpha;
-                _targetDarknessValue = _maxDarkness;
-            }
-
-            //if we're starting
-            else if (!_isDarkenInProgress)
-            {
-                _startingDarknessValue = _originalAlpha;
-                _targetDarknessValue = _maxDarkness;
-                _isDarkenInProgress = true;
-            }
-        }
-        /// <summary>
-        /// Triggers the "Lighten overlay over time" visual effect. Stops once the overlay is 'transparent' (or whatever the darkener's transparency was when this grid awakened).
-        /// </summary>
-        public void UndarkenGrid()
-        {
-            //ignore command if the grid is not dark
-            if (_darkenEffectImage.color.a == _originalAlpha)
-                return;
-
-            //ignore command if we're already UNdarkening the grid
-            if (_isDarkenInProgress && _targetDarknessValue == _originalAlpha)
-                return;
-
-            //if we're currently darkening, then reverse direction
-            if (_isDarkenInProgress && _targetDarknessValue == _maxDarkness)
-            {
-                //reverse our progression point
-                _currentDarkenTime = _darkenDuration - _currentDarkenTime;
-
-                //ensure our start and end points are reversed
-                _startingDarknessValue = _maxDarkness;
-                _targetDarknessValue = _originalAlpha;
-            }
-
-            //if we're starting
-            else if (!_isDarkenInProgress)
-            {
-                _startingDarknessValue = _maxDarkness;
-                _targetDarknessValue = _originalAlpha;
-                _isDarkenInProgress = true;
-                _currentDarkenTime = 0;
-            }
-        }
-        /// <summary>
-        /// Immediately resets the darkening/lightening effects to 'transparent' (or whatever the darkener's transparency was when this grid awakened). 
-        /// Useful for skipping the darken/lighten animations
-        /// </summary>
-        public void ForceImmediateUndarken()
-        {
-            _isDarkenInProgress = false;
-            _darkenEffectImage.color = new Color(_darkenEffectImage.color.r, _darkenEffectImage.color.g, _darkenEffectImage.color.b, _originalAlpha);
-            _currentDarkenTime = 0;
-        }
         /// <summary>
         /// Is this inventory marked as being a merchant? Merchant inventories (generally) only display the 'Buy' context Option.
         /// </summary>
@@ -3261,16 +3189,6 @@ namespace dtsInventory
                 _cmdMulticheckIfSpaceExists = false;
                 Debug.Log($"Does Space Exist for List of queries: {DoesSpaceExist(_paramQueryList)}");
             }
-            if (_cmdDarkenGrid)
-            {
-                _cmdDarkenGrid = false;
-                DarkenGrid();
-            }
-            if (_cmdUndarkenGrid)
-            {
-                _cmdUndarkenGrid = false;
-                UndarkenGrid();
-            }
             if (_cmdExpandGrid)
             {
                 _cmdExpandGrid = false;
@@ -3285,12 +3203,12 @@ namespace dtsInventory
             if (_cmdAddItem)
             {
                 _cmdAddItem = false;
-                AddItem(_paramItemData, 1);
+                AddItem(_paramItemData, _paramItemCount);
             }
             if (_cmdClearFocusedCell)
             {
                 _cmdClearFocusedCell = false;
-                ClearFocusedCell();
+                ClearHoveredCell();
             }
             if (_cmdPinItem)
             {
@@ -3304,26 +3222,13 @@ namespace dtsInventory
             return gameObject;
         }
 
-        public void ActivateSubcomponent(ILayoutSubcomponent self)
-        {
-            OnSubcomponentActivated?.Invoke(this);
-        }
 
-        public void DeactivateSubcomponent(ILayoutSubcomponent self)
-        {
-            OnSubcomponentDeactivated?.Invoke(this);
-        }
-        public void ResetSubcomponent(ILayoutSubcomponent self)
-        {
-            OnSubcomponentReset?.Invoke();
-        }
-
-        public void RespondToLeftAction()
+        public void RespondToLightLeftAction()
         {
             RotatePinnedItemLeft();
         }
 
-        public void RespondToRightAction()
+        public void RespondToLightRightAction()
         {
             RotatePinnedItemRight();
         }
@@ -3331,7 +3236,7 @@ namespace dtsInventory
         public void RespondToCancelInput()
         {
             if (_pinnedRectTransform == null)
-                DeactivateSubcomponent(this);
+                HideUi();
         }
 
         public void RespondToJumpHotkey()
@@ -3359,7 +3264,45 @@ namespace dtsInventory
             ReadGammaModifierInput(input);
         }
 
-        
+        public void ShowUi()
+        {
+            OnGridShown?.Invoke();
+        }
+
+        public void HideUi()
+        {
+            OnGridHidden?.Invoke();
+        }
+
+        public void FocusOnUi()
+        {
+            OnGridFocused?.Invoke();
+        }
+
+        public void UnfocusOnUi()
+        {
+            OnGridUnfocused?.Invoke();
+        }
+
+        public void RespondToSecondaryDirectionalInput(Vector2 input)
+        {
+            Debug.Log($"Grid Detected secondary input: ({input.x},{input.y})");
+        }
+
+        public void RespondToTertiaryDirectionalInput(Vector2 input)
+        {
+            Debug.Log($"Grid Detected tertiary input: ({input.x},{input.y})");
+        }
+
+        public void RespondToHeavyLeftAction()
+        {
+            Debug.Log("Grid Detected 'heavy' left input");
+        }
+
+        public void RespondToHeavyRightAction()
+        {
+            Debug.Log("Grid Detected 'heavy' right input");
+        }
     }
 }
 

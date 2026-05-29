@@ -30,13 +30,13 @@ namespace dtsInventory
         [SerializeField] private Transform _buttonOptionsContainer;
         [SerializeField] private UiDarkener _uiDarkener;
         [SerializeField] private NumericalSelectorController _numericalSelector;
-        [SerializeField] private TransferMenuController _transferMenuController;
+        //[SerializeField] private TransferMenuController _transferMenuController;
         [SerializeField] private RectTransform _costFeedbackUi;
         [SerializeField] private Text _costFeedbackText;
         [SerializeField] private Vector2 _costFeedbackOffset;
         [Tooltip("Where to position the numerical selector when a context option is selected, relative to the selected button's position")]
         [SerializeField] private Vector2 _numberSelectorOffsetFromButton;
-        [SerializeField] private Vector2 _transferMenuOffsetFromButton;
+        //[SerializeField] private Vector2 _transferMenuOffsetFromButton;
         private ContextOption _currentSelectedOption = ContextOption.None;
         private Button _selectedButton;
         private int _maximumInteractionAmount;
@@ -87,7 +87,7 @@ namespace dtsInventory
             }
             _uiDarkener.ForceImmediateUndarken();
             gameObject.SetActive(false);
-            _transferMenuController.SetContextMenuController(this);
+            //_transferMenuController.SetContextMenuController(this);
             
             
 
@@ -268,7 +268,7 @@ namespace dtsInventory
                 _boundWindow = boundWindow;
 
                 //provide visual feedback to represent the menu being opened
-                _boundWindow.DarkenGrid();
+                //_boundWindow.DarkenGrid();
                 _isWindowOpen = true;
 
                 //resize the window to match the number of options
@@ -307,12 +307,12 @@ namespace dtsInventory
                     CloseNumericalSelector();
 
                 _isWindowOpen = false;
-                _boundWindow.UndarkenGrid();
+                //_boundWindow.UndarkenGrid();
                 _boundWindow = null;
                 _currentButtons.Clear();
                 EventSystem.current.SetSelectedGameObject(null);
                 _uiDarkener.ForceImmediateUndarken();
-                _transferMenuController.ForceImmediateUndarken();
+                //_transferMenuController.ForceImmediateUndarken();
                 gameObject.SetActive(false);
                 _specifiedContainer = null;
                 _selectedButton = null;
@@ -324,7 +324,7 @@ namespace dtsInventory
             if (_isWindowOpen)
             {
                 _numericalSelector.HideNumericalSelector();
-                _transferMenuController.HideMenu();
+                //_transferMenuController.HideMenu();
                 HideOptionsWindow();
                 Debug.Log($"Returning to invInteracter. Context: {selectedOption}, Amount:{selectedAmount}");
 
@@ -417,9 +417,9 @@ namespace dtsInventory
                     }
 
                     Vector3 menuDrawPosition = originBtn.GetComponent<RectTransform>().TransformPoint(Vector3.zero);
-                    _transferMenuController.ShowMenu(menuDrawPosition,ContextOption.TransferItem);
-                    _transferMenuController.OffsetMenu(_transferMenuOffsetFromButton);
-                    _transferMenuController.SetSelectionToFirstElement();
+                    //_transferMenuController.ShowMenu(menuDrawPosition,ContextOption.TransferItem);
+                    //_transferMenuController.OffsetMenu(_transferMenuOffsetFromButton);
+                    //_transferMenuController.SetSelectionToFirstElement();
                     _uiDarkener.DarkenMenu();
                     return;
                 }
@@ -452,9 +452,9 @@ namespace dtsInventory
                     }
 
                     Vector3 menuDrawPosition = originBtn.GetComponent<RectTransform>().TransformPoint(Vector3.zero);
-                    _transferMenuController.ShowMenu(menuDrawPosition,ContextOption.SellItem);
-                    _transferMenuController.OffsetMenu(_transferMenuOffsetFromButton);
-                    _transferMenuController.SetSelectionToFirstElement();
+                    //_transferMenuController.ShowMenu(menuDrawPosition,ContextOption.SellItem);
+                    //_transferMenuController.OffsetMenu(_transferMenuOffsetFromButton);
+                    ////_transferMenuController.SetSelectionToFirstElement();
                     _uiDarkener.DarkenMenu();
                     return;
                 }
@@ -509,7 +509,7 @@ namespace dtsInventory
 
                 //darken the tranfer menu: if we reached this section of code, our transfer menu is already open 
                 //and the context menu is already darkened. 
-                _transferMenuController.DarkenTransferMenu();
+                //_transferMenuController.DarkenTransferMenu();
 
             }
 
@@ -548,10 +548,10 @@ namespace dtsInventory
             _numericalSelector.HideNumericalSelector();
 
             //if the transfer menu is open, undarken that first
-            if (ContextWindowHelper.IsTransferMenuOpen())
-                UndarkenTransferMenu();
-            else
-                UndarkenContextMenu();
+            //if (ContextWindowHelper.IsTransferMenuOpen())
+            //    UndarkenTransferMenu();
+            //else
+            //    UndarkenContextMenu();
         }
         public void ConfirmNumercialSelection(int amount)
         {
@@ -614,7 +614,7 @@ namespace dtsInventory
         public bool PointerMode() { return _numericalSelector.IsInPointerMode(); }
         public RectTransform GetConfirmBtnRectTransform() { return _numericalSelector.GetConfirmBtnRectTransform(); }
         public RectTransform GetInputAreaRectTransform() { return _numericalSelector.GetTextNavAreaRectTransform(); }
-        public RectTransform GetTransferMenuRectTransform() { return _transferMenuController.GetComponent<RectTransform>(); }
+        //public RectTransform GetTransferMenuRectTransform() { return _transferMenuController.GetComponent<RectTransform>(); }
         public void FocusOnNumericalSelector()
         {   
             _numericalSelector.FocusOnTextNavigationTarget();
@@ -625,23 +625,29 @@ namespace dtsInventory
         }
         public void ShowTransferMenu(Vector3 position,ContextOption context)
         {
-            _transferMenuController.ShowMenu(position, context);
+           // _transferMenuController.ShowMenu(position, context);
         }
         public void HideTransferMenu()
         {
-            _transferMenuController.HideMenu();
+           // _transferMenuController.HideMenu();
 
         }
-        public bool IsTransferMenuOpen() { return _transferMenuController.IsTransferMenuOpen();}
+        public bool IsTransferMenuOpen() 
+        {
+            //if (_transferMenuController != null)
+            //    return _transferMenuController.IsTransferMenuOpen();
+            //else return false;
+            return false;
+        }
         public bool IsDarkened() 
         {
             // return true if the image is dark, or is currently darkening
             return _uiDarkener.IsDarkened();
         }
         public void UndarkenContextMenu() { _uiDarkener.UndarkenMenu(); }
-        public void UndarkenTransferMenu() { _transferMenuController.UndarkenTransferMenu(); }
-        public void FocusOnTransferMenu() { _transferMenuController.SetSelectionToFirstElement(); }
-        public void FocusOnLatestTransferMenuElement() { _transferMenuController.SetSelectionToLatestElement(); }
+        //public void UndarkenTransferMenu() { _transferMenuController.UndarkenTransferMenu(); }
+        //public void FocusOnTransferMenu() { _transferMenuController.SetSelectionToFirstElement(); }
+        //public void FocusOnLatestTransferMenuElement() { _transferMenuController.SetSelectionToLatestElement(); }
         public void ActivateNumericalSelectorInputEditing() 
         { 
             if (_numericalSelector.IsNumericalSelectorOpen())
@@ -684,8 +690,8 @@ namespace dtsInventory
         public static bool IsTransferMenuOpen() { return _controller.IsTransferMenuOpen(); }
         public static bool IsMenuDarkened() { return _controller.IsDarkened(); }
         public static void UndarkenContextMenu() { _controller.UndarkenContextMenu(); }
-        public static void FocusOnTransferMenu() { _controller.FocusOnTransferMenu(); }
-        public static void FocusOnLatestTransferMenuOption() { _controller.FocusOnLatestTransferMenuElement(); }
+       // public static void FocusOnTransferMenu() { _controller.FocusOnTransferMenu(); }
+        //public static void FocusOnLatestTransferMenuOption() { _controller.FocusOnLatestTransferMenuElement(); }
         public static void HideTransferMenu() { _controller.HideTransferMenu(); }
         public static void ActivateNumericalSelectorInputEditing() {  _controller.ActivateNumericalSelectorInputEditing();}
         

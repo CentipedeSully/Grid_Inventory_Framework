@@ -2272,7 +2272,7 @@ namespace dtsInventory
 
                 return;
             }
-
+            /*
             //close the transferMenu if the click was outside of the menu
             if (ContextWindowHelper.IsTransferMenuOpen())
             {
@@ -2282,7 +2282,7 @@ namespace dtsInventory
                     _contextWindowController.HideTransferMenu();
 
                 return;
-            }
+            }*/
 
             //close the window if the click wasn't inside the menu
             if (ContextWindowHelper.IsContextWindowShowing())
@@ -3222,8 +3222,8 @@ namespace dtsInventory
 
                 if (ContextWindowHelper.IsTransferMenuOpen())
                 {
-                    if (RectTransformUtility.RectangleContainsScreenPoint(_contextWindowController.GetTransferMenuRectTransform(), _mousePosition))
-                        return true;
+                    //if (RectTransformUtility.RectangleContainsScreenPoint(_contextWindowController.GetTransferMenuRectTransform(), _mousePosition))
+                     //   return true;
                 }
 
                 return false;

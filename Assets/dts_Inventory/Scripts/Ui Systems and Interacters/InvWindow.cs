@@ -124,7 +124,7 @@ namespace dtsInventory
                     if (ContextWindowHelper.CurrentlyBoundWindow() == this)
                     {
                         ContextWindowHelper.HideContextWindow();
-                        _itemGrid.ForceImmediateUndarken();
+                        //_itemGrid.ForceImmediateUndarken();
                     }
                 }
                 //Debug.Log($"Firing [{gameObject.name}]'s OnClose Window Event now...");
@@ -176,8 +176,8 @@ namespace dtsInventory
 
 
 
-        public void DarkenGrid() { _itemGrid.DarkenGrid(); }
-        public void UndarkenGrid() { _itemGrid.UndarkenGrid(); }
+        //public void DarkenGrid() { _itemGrid.DarkenGrid(); }
+        //public void UndarkenGrid() { _itemGrid.UndarkenGrid(); }
         public void ActivateInputFieldEditing()
         {
             _containerInputField.ActivateInputField();

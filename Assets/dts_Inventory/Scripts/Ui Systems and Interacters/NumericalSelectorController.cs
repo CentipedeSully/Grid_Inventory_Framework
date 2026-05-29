@@ -214,11 +214,12 @@ namespace dtsInventory
                 if (InvManagerHelper.GetInvController().GetInputMode() == InputMode.Directional)
                 {
                     //forus on the last transfer menu item if the tranfer menu is open
-                    if (ContextWindowHelper.IsTransferMenuOpen())
-                        ContextWindowHelper.FocusOnLatestTransferMenuOption();
+                    //if (ContextWindowHelper.IsTransferMenuOpen())
+                    //    ContextWindowHelper.FocusOnLatestTransferMenuOption();
 
                     //otherwise focus on the last context menu item
-                    else ContextWindowHelper.FocusOnLatestMenuOption();
+                    //else ContextWindowHelper.FocusOnLatestMenuOption();
+                    ContextWindowHelper.FocusOnLatestMenuOption();
                 }
             }
 
