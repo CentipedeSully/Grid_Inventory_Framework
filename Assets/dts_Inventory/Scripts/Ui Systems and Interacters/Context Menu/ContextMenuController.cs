@@ -27,9 +27,9 @@ namespace dtsInventory
         public UnityEvent OnContextSet;
 
         private HashSet<ContextOption> _setOptions = new();
-        private List<Button> _activeBtnOptions = new();
-        private List<Button> _allBtnOptions = new();
-        private Button _hoveredBtn;
+        private List<GridInvButton> _activeBtnOptions = new();
+        private List<GridInvButton> _allBtnOptions = new();
+        private GridInvButton _hoveredBtn;
         private bool _isFocused = false;
         [SerializeField] private bool _isShowing = false;
 
@@ -53,7 +53,7 @@ namespace dtsInventory
             {
                 Transform child = _btnOptionsContainer.GetChild(i);
                 ContextualOptionDefinition context = child.GetComponent<ContextualOptionDefinition>();
-                Button btn = child.GetComponent<Button>();
+                GridInvButton btn = child.GetComponent<GridInvButton>();
 
                 if (context != null && !_allBtnOptions.Contains(btn))
                     _allBtnOptions.Add(btn);
@@ -99,7 +99,7 @@ namespace dtsInventory
             _positionContext = (-1, -1);
             _setOptions.Clear();
 
-            foreach (Button btn in _activeBtnOptions)
+            foreach (GridInvButton btn in _activeBtnOptions)
                 btn.gameObject.SetActive(false);
 
             _activeBtnOptions.Clear();
@@ -117,6 +117,7 @@ namespace dtsInventory
         //internals
         private void SetButtonAsHovered(int index)
         {
+
             //ignore if index out of range
             if (_activeBtnOptions.Count == 0 || index >= _activeBtnOptions.Count || index < 0)
                 return;
@@ -125,20 +126,25 @@ namespace dtsInventory
             if (_activeBtnOptions[index] == _hoveredBtn)
                 return;
 
-            //setup the event driver
-            PointerEventData tempPointer = new PointerEventData(EventSystem.current);
-
-            //exit the previous-hovered btn (if it exists)
-            if (_hoveredBtn != null)
-            {
-                ExecuteEvents.Execute(_hoveredBtn.gameObject, tempPointer, ExecuteEvents.pointerExitHandler);
-                _hoveredBtn = null;
-            }
+            //Clear the previously-hovered btn
+            ClearHoveredButton();
 
             //ensure the new btn is hovered
             _hoveredBtn = _activeBtnOptions[index];
-            ExecuteEvents.Execute(_hoveredBtn.gameObject, tempPointer, ExecuteEvents.pointerEnterHandler);
+            _hoveredBtn.SetButtonState(GIButtonState.Highlighted);
+            _currentHoveredBtnIndex = index;
 
+        }
+
+        private void ClearHoveredButton()
+        {
+            //exit the previous-hovered btn (if it exists)
+            if (_hoveredBtn != null)
+            {
+                _hoveredBtn.SetButtonState(GIButtonState.Normal);
+                _hoveredBtn = null;
+                _currentHoveredBtnIndex = -1;
+            }
         }
 
         
@@ -221,6 +227,43 @@ namespace dtsInventory
 
 
         //externals
+        public void RespondToPointerHoverOnBtn(GridInvButton hoveredBtn)
+        {
+
+            //don't respond if the menu isn't showing or isn't the ui's focus
+            if (!_isShowing || !_isFocused)
+                return;
+
+            if (_hoveredBtn == hoveredBtn)
+                return;
+
+            //update the current hovered btn if it exists within the active btn list
+            if (_activeBtnOptions.Contains(hoveredBtn))
+            {
+                int index = _activeBtnOptions.IndexOf(hoveredBtn);
+                SetButtonAsHovered(index);
+                
+            }
+        }
+        public void RespondToPointerExitedBtnHover(GridInvButton exitedBtn)
+        {
+
+            //don't respond if the menu isn't showing or isn't the ui's focus
+            if (!_isShowing || !_isFocused)
+                return;
+
+            //update the exited button, regardless of it's current state
+            exitedBtn.SetButtonState(GIButtonState.Normal);
+
+            //if this exited button is our currently hovered btn, update our internal hovered-btn state
+            if (_hoveredBtn == exitedBtn)
+            {
+                _hoveredBtn = null;
+                _currentHoveredBtnIndex = -1;
+            }
+
+
+        }
         public void SetContext(HashSet<ContextOption> options,(int,int) position, InvGrid grid)
         {
             if (options == null)

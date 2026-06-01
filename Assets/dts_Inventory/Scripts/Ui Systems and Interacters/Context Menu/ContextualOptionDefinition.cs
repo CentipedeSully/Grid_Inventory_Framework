@@ -1,15 +1,26 @@
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace dtsInventory
 {
-    public class ContextualOptionDefinition : MonoBehaviour
+    public class ContextualOptionDefinition : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField] private ContextOption _optionType = ContextOption.None;
         //[SerializeField] private ContextWindowController _contextWindowController;
         [SerializeField] private ContextMenuController ContextMenuController;
 
+        public UnityEvent<GridInvButton> OnPointerEnter;
+        public UnityEvent<GridInvButton> OnPointerExit;
+
+
+       
+
         public ContextOption GetContextOption() { return _optionType; }
+
+
 
         //refernced via unity event in the Contextual option prefab
         public void PerformSelectionOfThisOption() 
@@ -19,6 +30,18 @@ namespace dtsInventory
 
             //_contextWindowController.MarkOptionAsSelected(GetComponent<Button>()); 
             //_contextWindowController.SpecifyAmount(_optionType); 
+
+
+        }
+
+        void IPointerEnterHandler.OnPointerEnter(PointerEventData eventData)
+        {
+            OnPointerEnter?.Invoke(GetComponent<GridInvButton>());
+        }
+
+        void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
+        {
+            OnPointerExit?.Invoke(GetComponent<GridInvButton>());
         }
     }
 }
