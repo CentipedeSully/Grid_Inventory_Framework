@@ -158,6 +158,8 @@ namespace dtsInventory
                 return;
             }
 
+            if (_activeBtnOptions.Count <= 1)
+                return;
 
             //Imagine we're stepping through a list that's rendered as 2 columns:
             //     Btn 0    Btn 1
@@ -174,51 +176,95 @@ namespace dtsInventory
             
             //left move : -1
             if (direction.x < -0.1f)
-                stepCount += -1;
+            {
+                //if our current position is even, wrap to the other side of the menu
+                if (_currentHoveredBtnIndex % 2 == 0)
+                {
+                    //wrap to [currentPosition + 1] position (assuming it exists)
+                    if (_currentHoveredBtnIndex + 1 < _activeBtnOptions.Count)
+                        SetButtonAsHovered(_currentHoveredBtnIndex + 1);
+                }
+
+                //just go to the left
+                else SetButtonAsHovered(_currentHoveredBtnIndex - 1);
+            }
+                
 
             //right move : +1
             if (direction.x > 0.1f)
-                stepCount += 1;
+            {
+                //if our current position is odd, wrap to the other side of the menu
+                if (_currentHoveredBtnIndex % 2 == 1)
+                {
+                    SetButtonAsHovered(_currentHoveredBtnIndex - 1);
+
+                }
+
+                //just go to the right (assuming the position exists)
+                else if (_currentHoveredBtnIndex + 1 < _activeBtnOptions.Count)
+                    SetButtonAsHovered(_currentHoveredBtnIndex + 1);
+            }
 
             //up move : -2
             if (direction.y > 0.1f)
-                stepCount += -2;
+            {
+                //only calculate vertical movement if we have more than 1 row
+                if (_activeBtnOptions.Count > 2)
+                {
+                    //if we can go up without needing to wrap, do it
+                    if (_currentHoveredBtnIndex - 2 >= 0)
+                        SetButtonAsHovered(_currentHoveredBtnIndex - 2);
+
+                    else
+                    {
+                        //calculate the wrapped index
+                        int wrapIndex = _activeBtnOptions.Count + (_currentHoveredBtnIndex - 2);
+
+                        //if the number of menu options are even, then we can wrap naturally
+                        if (_activeBtnOptions.Count % 2 == 0)
+                            SetButtonAsHovered(wrapIndex);
+
+                        else
+                        {
+                            if (_currentHoveredBtnIndex % 2 == 0)
+                                SetButtonAsHovered(wrapIndex + 1); // offset the wrap to remain on the evens side
+                            else SetButtonAsHovered(wrapIndex - 1); // offset the wrap to remain on the odds side
+                        }
+                        
+                    }
+                }
+            }
 
             //down move : +2
             if (direction.y < -0.1f)
-                stepCount += 2;
-
-
-            int newHoverBtnIndex = _currentHoveredBtnIndex + stepCount;
-
-            //ensure the while loops don't repeat forever, under any circumstance
-            int iterationsMax = 10;
-            int currentIterations = 0;
-
-            while (newHoverBtnIndex < 0 && currentIterations < iterationsMax)  //
             {
-                //offset by the list's btn count.
-                newHoverBtnIndex += _activeBtnOptions.Count;
-                currentIterations++;
+                //only calculate vertical movement if we have more than 1 row
+                if (_activeBtnOptions.Count > 2)
+                {
+                    //if we can go down without needing to wrap, do it
+                    if (_currentHoveredBtnIndex + 2 <= _activeBtnOptions.Count)
+                        SetButtonAsHovered(_currentHoveredBtnIndex + 2);
+
+                    else
+                    {
+                        //calculate the wrapped index
+                        int wrapIndex = (_currentHoveredBtnIndex + 2) - _activeBtnOptions.Count;
+
+                        //if the number of menu options are even, then we can wrap naturally
+                        if (_activeBtnOptions.Count % 2 == 0)
+                            SetButtonAsHovered(wrapIndex);
+
+                        else
+                        {
+                            if (_currentHoveredBtnIndex % 2 == 0)
+                                SetButtonAsHovered(wrapIndex - 1); // offset the wrap to remain on the evens side
+                            else SetButtonAsHovered(wrapIndex + 1); // offset the wrap to remain on the odds side
+                        }
+
+                    }
+                }
             }
 
-            currentIterations = 0;
-            while (newHoverBtnIndex >= _activeBtnOptions.Count && currentIterations < iterationsMax)
-            {
-                //offset by the list's btn count.
-                newHoverBtnIndex -= _activeBtnOptions.Count;
-                currentIterations++;
-            }
-
-            //detect if an infinite while was caught
-            if (currentIterations >= iterationsMax && (newHoverBtnIndex < 0 || newHoverBtnIndex >= _activeBtnOptions.Count))
-            {
-                Debug.LogWarning("Failed to calculate the step count. An infinite loop was possibly detected. Ignoring directional navigation.");
-                return;
-            }
-
-            _currentHoveredBtnIndex = newHoverBtnIndex;
-            SetButtonAsHovered(_currentHoveredBtnIndex);
 
 
         }
