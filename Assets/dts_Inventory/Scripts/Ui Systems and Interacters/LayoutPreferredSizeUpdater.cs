@@ -77,7 +77,7 @@ namespace dtsInventory
                 {
                     if (_layoutElementToUpdate.preferredHeight != _detectedLayoutElement.preferredHeight)
                     {
-                        Debug.Log($"Detected Preferred Height: {_detectedLayoutElement.preferredHeight} [{_layoutTransformToWatch.name}]");
+                        //Debug.Log($"Detected Preferred Height: {_detectedLayoutElement.preferredHeight} [{_layoutTransformToWatch.name}]");
                         _layoutElementToUpdate.preferredHeight = _detectedLayoutElement.preferredHeight;
                     }
 
@@ -91,7 +91,7 @@ namespace dtsInventory
                 {
                     if (_layoutElementToUpdate.preferredWidth != _detectedLayoutElement.preferredWidth)
                     {
-                        Debug.Log($"Detected Preferred Width: {_detectedLayoutElement.preferredWidth} [{_layoutTransformToWatch.name}]");
+                        //Debug.Log($"Detected Preferred Width: {_detectedLayoutElement.preferredWidth} [{_layoutTransformToWatch.name}]");
                         _layoutElementToUpdate.preferredWidth = _detectedLayoutElement.preferredWidth;
                     }
 

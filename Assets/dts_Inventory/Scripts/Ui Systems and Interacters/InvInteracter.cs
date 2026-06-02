@@ -137,7 +137,7 @@ namespace dtsInventory
         }
         private void Start()
         {
-            ContextWindowHelper.SetPointerMode(true);
+            //ContextWindowHelper.SetPointerMode(true);
 
         }
 
@@ -2265,11 +2265,12 @@ namespace dtsInventory
             {
                 RectTransform numericalRectTransform = _contextWindowController.NumericalSelectorRectTransform();
 
+                /*
                 //this just checks within the context menu AND the confirmBtn for the mouse
                 if (!RectTransformUtility.RectangleContainsScreenPoint(numericalRectTransform, _mousePosition)
                     && !RectTransformUtility.RectangleContainsScreenPoint(_contextWindowController.GetConfirmBtnRectTransform(),_mousePosition))
                     ContextWindowHelper.HideNumericalSelector();
-
+                */
                 return;
             }
             /*
@@ -2469,6 +2470,7 @@ namespace dtsInventory
 
             if (ContextWindowHelper.IsNumericalSelectorWindowOpen())
             {
+                /*
                 //if scrolling within the input field
                 if (RectTransformUtility.RectangleContainsScreenPoint(_contextWindowController.GetInputAreaRectTransform(), _mousePosition))
                 {
@@ -2481,7 +2483,7 @@ namespace dtsInventory
                         ContextWindowHelper.DecrementNumericalSelector(-modifier);
 
                     return;
-                }
+                }*/
             }
         }
         public void RespondToLeftDirectionalCommand()
@@ -2627,8 +2629,8 @@ namespace dtsInventory
 
             if (ContextWindowHelper.IsNumericalSelectorWindowOpen())
             {
-                if (!ContextWindowHelper.IsNumericalSelectorCurrentlyFocused())
-                    ContextWindowHelper.FocusOnNumericalSelector();
+                //if (!ContextWindowHelper.IsNumericalSelectorCurrentlyFocused())
+                //    ContextWindowHelper.FocusOnNumericalSelector();
 
                 if (_altCmd && _altCmd2)
                     ContextWindowHelper.IncrementNumericalSelector(100);
@@ -2720,8 +2722,8 @@ namespace dtsInventory
 
             if (ContextWindowHelper.IsNumericalSelectorWindowOpen())
             {
-                if (!ContextWindowHelper.IsNumericalSelectorCurrentlyFocused())
-                    ContextWindowHelper.FocusOnNumericalSelector();
+                //if (!ContextWindowHelper.IsNumericalSelectorCurrentlyFocused())
+                //    ContextWindowHelper.FocusOnNumericalSelector();
 
                 if (_altCmd && _altCmd2)
                     ContextWindowHelper.DecrementNumericalSelector(100);
@@ -2852,7 +2854,7 @@ namespace dtsInventory
                     if (!ContextWindowHelper.IsContextWindowShowing())
                         ReEnterGridOnPointerLocation();
 
-                    ContextWindowHelper.SetPointerMode(true);
+                    //ContextWindowHelper.SetPointerMode(true);
                     _graphicRaycaster.enabled = true;
                 }
 
@@ -2862,7 +2864,7 @@ namespace dtsInventory
                     if (_invGrid == null)
                         SetPointerToHomeGrid();
 
-                    ContextWindowHelper.SetPointerMode(false);
+                    //ContextWindowHelper.SetPointerMode(false);
                     _graphicRaycaster.enabled = false;
                 }
 

@@ -15,27 +15,44 @@ namespace dtsInventory
     {
         [SerializeField] private GameObject _contextMenu;
         [SerializeField] private RectTransform _btnOptionsContainer;
-
-        //unity Events
-        public UnityEvent OnContextMenuShown;
-        public UnityEvent OnContextMenuHidden;
-
-        public UnityEvent OnUiEnteredAsFocused;
-        public UnityEvent OnUiExitedFromFocused;
-
-        public UnityEvent OnMenuRebuilt;
-        public UnityEvent OnContextSet;
-
         private HashSet<ContextOption> _setOptions = new();
         private List<GridInvButton> _activeBtnOptions = new();
         private List<GridInvButton> _allBtnOptions = new();
         private GridInvButton _hoveredBtn;
-        private bool _isFocused = false;
+        [SerializeField] private bool _isFocused = false;
         [SerializeField] private bool _isShowing = false;
+        [SerializeField] private int _currentHoveredBtnIndex = -1;
+
+
+        //unity Events
+        [Header("Core Events")]
+        public UnityEvent OnContextMenuShown;
+        public UnityEvent OnContextMenuHidden;
+
+        public UnityEvent OnUiFocused;
+        public UnityEvent OnUiUnfocused;
+
+        public UnityEvent OnMenuRebuilt;
+        public UnityEvent OnContextSet;
+
+        public UnityEvent<ContextOption,int,int> OnNumericalSelectorRequested;
+
+        [Header("Contextual Events")]
+        public UnityEvent<int> OnOrganize;
+        public UnityEvent<int> OnUse;
+        public UnityEvent<int> OnDiscard;
+        public UnityEvent<int> OnBuy;
+        public UnityEvent<int> OnSell;
+        public UnityEvent<int> OnTransfer;
+        public UnityEvent<int> OnTake;
+        
 
         private (int, int) _positionContext = (-1,-1);
         private InvGrid _gridContext;
-        [SerializeField] private int _currentHoveredBtnIndex = -1;
+        private ContextOption _selectedContextOption = ContextOption.None;
+        private Vector2Int _interactionRange = Vector2Int.one;
+        private int _interactionAmount = 0;
+        
 
         private void Awake()
         {
@@ -98,6 +115,9 @@ namespace dtsInventory
             _gridContext = null;
             _positionContext = (-1, -1);
             _setOptions.Clear();
+            _selectedContextOption = ContextOption.None;
+            _interactionAmount = 0;
+            _interactionRange = Vector2Int.one;
 
             foreach (GridInvButton btn in _activeBtnOptions)
                 btn.gameObject.SetActive(false);
@@ -172,7 +192,6 @@ namespace dtsInventory
             // Below we're calculating the logical index jump from whatever input direction we receive
 
 
-            int stepCount = 0;
             
             //left move : -1
             if (direction.x < -0.1f)
@@ -269,7 +288,40 @@ namespace dtsInventory
 
         }
 
+        private void TriggerInteractionEvent(int amountToInteractWith)
+        {
+            switch (_selectedContextOption)
+            {
+                case ContextOption.OrganizeItem:
+                    OnOrganize?.Invoke(amountToInteractWith);
+                    break;
 
+                case ContextOption.UseItem:
+                    OnUse?.Invoke(amountToInteractWith);
+                    break;
+
+                case ContextOption.DiscardItem:
+                    OnDiscard?.Invoke(amountToInteractWith);
+                    break;
+
+                case ContextOption.BuyItem:
+                    OnBuy?.Invoke(amountToInteractWith);
+                    break;
+
+                case ContextOption.SellItem:
+                    OnSell?.Invoke(amountToInteractWith);
+                    break;
+
+                case ContextOption.TransferItem:
+                    OnTransfer?.Invoke(amountToInteractWith);
+                    break;
+
+                case ContextOption.TakeItem:
+                    OnTake?.Invoke(amountToInteractWith);
+                    break;
+
+            }
+        }
 
 
         //externals
@@ -310,6 +362,36 @@ namespace dtsInventory
 
 
         }
+        public void RespondToContextSelection(ContextualOptionDefinition contextOption)
+        {
+            //ignore any selections that're made if the contextMenu isn't the active Ui focus
+            if (!_isShowing || !_isFocused)
+                return;
+
+            _selectedContextOption = contextOption.GetContextOption();
+
+            //setup the numerical selector
+            _interactionRange.x = 1;
+            _interactionRange.y = _gridContext.GetStackValue(_positionContext);
+
+            //auto complete the interaction if you can only interact with 1
+            if (_interactionRange.y == 1)
+            {
+                _interactionAmount = 1;
+                TriggerInteractionEvent(_interactionAmount);
+            }
+
+            //otherwise show the numerical selector. Let the user choose how many to interact with.
+            else OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+
+        }
+
+        public void RespondToNumericalSelection(int selectedValue)
+        {
+            TriggerInteractionEvent(selectedValue);
+        }
+
+
         public void SetContext(HashSet<ContextOption> options,(int,int) position, InvGrid grid)
         {
             if (options == null)
@@ -355,6 +437,7 @@ namespace dtsInventory
                 _contextMenu.SetActive(true);
                 ResetNav();
                 OnContextMenuShown?.Invoke();
+                UpdateGIMOnShown(this);
             }
         }
 
@@ -367,17 +450,20 @@ namespace dtsInventory
 
                 ClearContext();
                 ResetNav();
+                UpdateGIMOnHidden(this);
                 OnContextMenuHidden?.Invoke();
             }
         }
+
+        public void UpdateGIMOnShown(IGridUiElement self) { GIMHelper.UpdateGIMOnShown(this); }
+        public void UpdateGIMOnHidden(IGridUiElement self) { GIMHelper.UpdateGIMOnHidden(this); }
 
         public void FocusOnUi()
         {
             if (!_isFocused)
             {
                 _isFocused = true;
-                GIMHelper.FocusOnGridElement(this);
-                OnUiEnteredAsFocused?.Invoke();
+                OnUiFocused?.Invoke();
             }
         }
 
@@ -386,8 +472,7 @@ namespace dtsInventory
             if (_isFocused)
             {
                 _isFocused = false;
-                GIMHelper.ClearElementFromFocus(this);
-                OnUiExitedFromFocused?.Invoke();
+                OnUiUnfocused?.Invoke();
             }
         }
 
@@ -428,7 +513,13 @@ namespace dtsInventory
 
         public void RespondToConfirmInput()
         {
-            //...
+            if (!_isShowing || !_isFocused)
+                return;
+
+            if (_currentHoveredBtnIndex > -1 && _currentHoveredBtnIndex < _activeBtnOptions.Count)
+            {
+                _activeBtnOptions[_currentHoveredBtnIndex].onClick?.Invoke();
+            }
         }
 
         public void RespondToCancelInput()
@@ -459,6 +550,11 @@ namespace dtsInventory
         public void ReadGammaInput(bool input)
         {
             //...
+        }
+
+        public bool IsShown()
+        {
+            return _isShowing;
         }
     }
 }

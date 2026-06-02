@@ -13,17 +13,18 @@ namespace dtsInventory
         [SerializeField] private Image _darkenEffectImage;
         [SerializeField] private float _darkenDuration;
         [SerializeField] private float _maxDarkness;
-        private bool _isDarkenInProgress = false;
+        [SerializeField] private bool _isDarkenInProgress = false;
         private float _alpha;
-        private float _currentDarkenTime;
-        private float _targetDarknessValue;
-        private float _startingDarknessValue;
+        [SerializeField] private float _currentDarkenTime;
+        [SerializeField] private float _targetDarknessValue;
+        [SerializeField] private float _startingDarknessValue;
 
         private void Start()
         {
             if (_darkenOnStart)
                 DarkenMenu();
             else UndarkenMenu();
+
         }
 
         private void Update()
@@ -37,6 +38,7 @@ namespace dtsInventory
 
         private void UpdateDarkeningEffects()
         {
+            //Debug.Log("Updating UiDarkener VFX");
             if (_darkenEffectImage.color.a == _targetDarknessValue)
             {
                 _isDarkenInProgress = false;
@@ -44,8 +46,11 @@ namespace dtsInventory
 
                 if (_targetDarknessValue == 0)
                 {
-                    _darkenEffectImage.gameObject.SetActive(false);
+                    //_darkenEffectImage.gameObject.SetActive(false);
+                    //Debug.Log("Undarken Successful");
                 }
+                //else Debug.Log("Darken Successful");
+
             }
             else
             {
@@ -65,8 +70,10 @@ namespace dtsInventory
 
         public void DarkenMenu()
         {
+            _targetDarknessValue = _maxDarkness;
+
             //ignore command if the grid is already dark
-            if (_darkenEffectImage.color.a == _maxDarkness)
+            if (_darkenEffectImage.color.a == _targetDarknessValue)
                 return;
 
             //ignore command if we're already darkening the grid
@@ -95,8 +102,10 @@ namespace dtsInventory
         }
         public void UndarkenMenu()
         {
+            _targetDarknessValue = 0;
+
             //ignore command if the grid is not dark
-            if (_darkenEffectImage.color.a == 0)
+            if (_darkenEffectImage.color.a == _targetDarknessValue)
                 return;
 
             //ignore command if we're already UNdarkening the grid

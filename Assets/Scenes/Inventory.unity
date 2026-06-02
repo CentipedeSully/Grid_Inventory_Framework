@@ -793,25 +793,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _isInventoryShowing: 0
-  _defaultFocus: {fileID: 8377175759222511347}
   OnShowGridUi:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1314535435}
-        m_TargetAssemblyTypeName: RectTransformTransitioner, Assembly-CSharp
-        m_MethodName: MoveToShowingPosition
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
       - m_Target: {fileID: 7768827273871646501}
         m_TargetAssemblyTypeName: dtsInventory.InvGrid, Assembly-CSharp
-        m_MethodName: FocusOnUi
+        m_MethodName: ShowUi
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -824,18 +811,6 @@ MonoBehaviour:
   OnHideGridUi:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1314535435}
-        m_TargetAssemblyTypeName: RectTransformTransitioner, Assembly-CSharp
-        m_MethodName: MoveToHiddenPosition
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
       - m_Target: {fileID: 7768827273871646501}
         m_TargetAssemblyTypeName: dtsInventory.InvGrid, Assembly-CSharp
         m_MethodName: HideUi
@@ -852,6 +827,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   OnFocusedElementExited:
+    m_PersistentCalls:
+      m_Calls: []
+  OnElementOpened:
+    m_PersistentCalls:
+      m_Calls: []
+  OnElementClosed:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1 &396664317
@@ -1226,27 +1207,45 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _contextMenu: {fileID: 649533887}
   _btnOptionsContainer: {fileID: 5370473322456621975}
+  _isFocused: 0
+  _isShowing: 0
+  _currentHoveredBtnIndex: 0
   OnContextMenuShown:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 451867011}
-        m_TargetAssemblyTypeName: dtsInventory.ContextMenuController, Assembly-CSharp
-        m_MethodName: FocusOnUi
-        m_Mode: 1
+      - m_Target: {fileID: 396664323}
+        m_TargetAssemblyTypeName: dtsInventory.EventSignalLogger, Assembly-CSharp
+        m_MethodName: LogCustomMessage
+        m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: 
+          m_StringArgument: Shown menu
           m_BoolArgument: 0
         m_CallState: 2
   OnContextMenuHidden:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 451867011}
-        m_TargetAssemblyTypeName: dtsInventory.ContextMenuController, Assembly-CSharp
-        m_MethodName: UnfocusOnUi
+      - m_Target: {fileID: 396664323}
+        m_TargetAssemblyTypeName: dtsInventory.EventSignalLogger, Assembly-CSharp
+        m_MethodName: LogCustomMessage
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Hidden Menu
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnUiFocused:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6609164890292128308}
+        m_TargetAssemblyTypeName: dtsInventory.UiDarkener, Assembly-CSharp
+        m_MethodName: UndarkenMenu
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1256,12 +1255,45 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  OnUiEnteredAsFocused:
+      - m_Target: {fileID: 396664323}
+        m_TargetAssemblyTypeName: dtsInventory.EventSignalLogger, Assembly-CSharp
+        m_MethodName: LogCustomMessage
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Focused On Menu
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnUiUnfocused:
     m_PersistentCalls:
-      m_Calls: []
-  OnUiExitedFromFocused:
-    m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6609164890292128308}
+        m_TargetAssemblyTypeName: dtsInventory.UiDarkener, Assembly-CSharp
+        m_MethodName: DarkenMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 396664323}
+        m_TargetAssemblyTypeName: dtsInventory.EventSignalLogger, Assembly-CSharp
+        m_MethodName: LogCustomMessage
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Unfocused On Menu
+          m_BoolArgument: 0
+        m_CallState: 2
   OnMenuRebuilt:
     m_PersistentCalls:
       m_Calls:
@@ -1292,8 +1324,42 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  _isShowing: 0
-  _currentHoveredBtnIndex: 0
+  OnNumericalSelectorRequested:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6781414822558607204}
+        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
+        m_MethodName: RespondToNumericalSelectRequest
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnOrganize:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUse:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDiscard:
+    m_PersistentCalls:
+      m_Calls: []
+  OnBuy:
+    m_PersistentCalls:
+      m_Calls: []
+  OnSell:
+    m_PersistentCalls:
+      m_Calls: []
+  OnTransfer:
+    m_PersistentCalls:
+      m_Calls: []
+  OnTake:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &451867012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1946,7 +2012,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 740753798}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1001 &798872374
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2393,7 +2471,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1019924109}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!224 &1106169419 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1211589539277184624, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -2938,7 +3028,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1349703724}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &1397700109
 GameObject:
   m_ObjectHideFlags: 0
@@ -3447,7 +3549,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1538390885}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &1605375825
 GameObject:
   m_ObjectHideFlags: 0
@@ -4844,7 +4958,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2049554000}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &2113503285 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 941825146123450602, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -4906,7 +5032,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2113503287}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!224 &2138669269 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1211589539277184624, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -4980,7 +5118,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2138669275}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1106169423}
+        m_TargetAssemblyTypeName: dtsInventory.ContextualOptionDefinition, Assembly-CSharp
+        m_MethodName: PerformSelectionOfThisOption
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &916858626551155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5747,6 +5897,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -5758,6 +5913,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -5777,6 +5937,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -5792,6 +5957,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -5802,12 +5977,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -6164,6 +6349,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -6175,6 +6365,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -6194,6 +6389,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -6209,6 +6409,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -6219,12 +6429,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -7103,7 +7323,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6934117907420627732}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6781414822558607204}
+        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
+        m_MethodName: IncrementNumber
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &2804694977193309580
 GameObject:
   m_ObjectHideFlags: 0
@@ -7369,6 +7601,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -7380,6 +7617,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -7399,6 +7641,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -7414,6 +7661,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -7424,12 +7681,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -7756,6 +8023,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -7767,6 +8039,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -7786,6 +8063,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -7801,6 +8083,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -7811,12 +8103,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -7891,7 +8193,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3193950675737813608}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6781414822558607204}
+        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
+        m_MethodName: SubmitNumber
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!224 &3433383215723501545
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7909,8 +8223,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 15.5, y: -1.8333334}
-  m_SizeDelta: {x: 31, y: 3.6666667}
+  m_AnchoredPosition: {x: 15.5, y: -1.3533335}
+  m_SizeDelta: {x: 31, y: 2.706667}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &3434697281821120873
 MonoBehaviour:
@@ -8567,6 +8881,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -8578,6 +8897,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -8597,6 +8921,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -8612,6 +8941,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -8622,12 +8961,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -9672,6 +10021,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -9683,6 +10037,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -9702,6 +10061,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -9717,6 +10081,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -9727,12 +10101,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -10005,6 +10389,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: ContextMenuController
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: _contextWindowController
       value: 
       objectReference: {fileID: 0}
@@ -10016,6 +10405,11 @@ PrefabInstance:
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
@@ -10035,6 +10429,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 451867011}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
@@ -10050,6 +10449,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: RespondToContextSelection
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: dtsInventory.ContextMenuController, Assembly-CSharp
       objectReference: {fileID: 0}
@@ -10060,12 +10469,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: dtsInventory.ContextMenuController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
       propertyPath: OnPointerExit.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
         type: 3}
       propertyPath: OnPointerEnter.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591752065101252793, guid: 1c0af4243d6277f4892f90caf6610079,
+        type: 3}
+      propertyPath: OnContextSelected.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents:
@@ -10095,8 +10514,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 15.5, y: -28.166666}
-  m_SizeDelta: {x: 31, y: 3.6666667}
+  m_AnchoredPosition: {x: 15.5, y: -28.646667}
+  m_SizeDelta: {x: 31, y: 2.706667}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5740943094206730768
 MonoBehaviour:
@@ -10301,7 +10720,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 0.7529412}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -10351,20 +10770,28 @@ MonoBehaviour:
   _maxNumber: 999
   _minNumber: 0
   _number: 0
-  _textDisplay: {fileID: 6554905281359408037}
-  _inputField: {fileID: 7696732168928225156}
+  _textDisplay: {fileID: 0}
+  _inputField: {fileID: 0}
   _textNavigationTarget: {fileID: 8852039857263046213}
   _onValueChangedAudioClip: {fileID: 8300000, guid: 087224dd7ec352f42a3b950a07009a88,
     type: 3}
   _confirmInputDelay: 0.1
   _pointerConfirmBtn: {fileID: 5093806491272101964}
-  _costUi: {fileID: 0}
-  _costUiText: {fileID: 0}
-  _costUiOffset: {x: 0, y: 32}
-  _buyingCostTextColor: {r: 1, g: 0.9238699, b: 0, a: 1}
-  _sellingPaymentTextColor: {r: 0, g: 0.509434, b: 0.096060455, a: 1}
-  _confirmBtnAnimator: {fileID: 2755866946541727283}
-  _defaultReturnObject: {fileID: 0}
+  OnUiShown:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiHidden:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiFocused:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiUnfocused:
+    m_PersistentCalls:
+      m_Calls: []
+  OnValueSubmitted:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!222 &6213781325816932119
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10466,6 +10893,10 @@ MonoBehaviour:
   _darkenEffectImage: {fileID: 5433004513553585111}
   _darkenDuration: 0.2
   _maxDarkness: 0.7
+  _isDarkenInProgress: 0
+  _currentDarkenTime: 0
+  _targetDarknessValue: 0
+  _startingDarknessValue: 0
 --- !u!224 &6507167264769772019
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10553,6 +10984,10 @@ MonoBehaviour:
   _darkenEffectImage: {fileID: 6014549846676249036}
   _darkenDuration: 0.2
   _maxDarkness: 0.8
+  _isDarkenInProgress: 0
+  _currentDarkenTime: 0
+  _targetDarknessValue: 0
+  _startingDarknessValue: 0
 --- !u!1 &6614741234162374026
 GameObject:
   m_ObjectHideFlags: 0
@@ -10583,6 +11018,7 @@ GameObject:
   - component: {fileID: 6781414822558607203}
   - component: {fileID: 3257230256018992384}
   - component: {fileID: 6290617901643782905}
+  - component: {fileID: 6781414822558607204}
   m_Layer: 5
   m_Name: Numerical Selector
   m_TagString: Untagged
@@ -10611,6 +11047,66 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 35, y: 34}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6781414822558607204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6764314068662236054}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4f9321874129fe438cb823466546d4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxNumber: 9999
+  _minNumber: 1
+  _number: 0
+  _textDisplay: {fileID: 1196435386}
+  _inputField: {fileID: 8955443448460413083}
+  _textNavigationTarget: {fileID: 0}
+  _onValueChangedAudioClip: {fileID: 0}
+  _confirmInputDelay: 0.1
+  _pointerConfirmBtn: {fileID: 3409134469249948768}
+  OnUiShown:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiHidden:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiFocused:
+    m_PersistentCalls:
+      m_Calls: []
+  OnUiUnfocused:
+    m_PersistentCalls:
+      m_Calls: []
+  OnValueSubmitted:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 451867011}
+        m_TargetAssemblyTypeName: dtsInventory.ContextMenuController, Assembly-CSharp
+        m_MethodName: RespondToNumericalSelection
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 6781414822558607204}
+        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
+        m_MethodName: HideUi
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &6788652160356361650
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10884,7 +11380,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1564154770764057096}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6781414822558607204}
+        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
+        m_MethodName: DecrementNumber
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &7400679869787738430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11756,7 +12264,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 15.5, y: -15}
-  m_SizeDelta: {x: 31, y: 18.666666}
+  m_SizeDelta: {x: 31, y: 20.586666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8955443448460413083
 MonoBehaviour:
@@ -11820,22 +12328,10 @@ MonoBehaviour:
   m_OnEndEdit:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
-        m_MethodName: VerifyInputOnEnd
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: dtsInventory.NumericalSelectorController, Assembly-CSharp
-        m_MethodName: SubmitNumber
-        m_Mode: 1
+      - m_Target: {fileID: 1196435386}
+        m_TargetAssemblyTypeName: TMPro.TMP_Text, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

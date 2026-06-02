@@ -9,13 +9,13 @@ namespace dtsInventory
     {
         public void OnSelect(BaseEventData eventData)
         {
-            InvManagerHelper.SetInvSystemLock(true);
+            //InvManagerHelper.SetInvSystemLock(true);
         }
 
         public void UnlockInvSystem()
         {
-            InvManagerHelper.SetInvSystemLock(false);
-            InvManagerHelper.IgnoreOtherConfirmCommandsUntilEndOfFrame();
+            //InvManagerHelper.SetInvSystemLock(false);
+            //InvManagerHelper.IgnoreOtherConfirmCommandsUntilEndOfFrame();
         }
     }
 }

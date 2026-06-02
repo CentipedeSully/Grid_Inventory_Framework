@@ -11,10 +11,14 @@ namespace dtsInventory
     public interface IGridUiElement
     {
         GameObject GetGameObject();
+        void UpdateGIMOnShown(IGridUiElement self);
+        void UpdateGIMOnHidden(IGridUiElement self);
         void ShowUi();
         void HideUi();
         void FocusOnUi(); 
         void UnfocusOnUi();
+
+        bool IsShown();
 
         //elements dont NEED to respond to every binding if you're building your own elements.
         //Confirm, Back, and a single Directional response are highly recommended for a general navigation & selection experience, tho.
@@ -48,22 +52,23 @@ namespace dtsInventory
         [Header("State Values")]
         private IGridUiElement _focusedElement = null;
         [SerializeField] private bool _isInventoryShowing = false;
-        [Tooltip("The IGridUiElement component on this objects will get focused on automatically when this ui is shown " +
-            "(and also exits the component when this ui is hidden).")]
-        [SerializeField] private GameObject _defaultFocus;
         [SerializeField] private List<IGridUiElement> _focusStack = new List<IGridUiElement>();
 
 
         //unity events
-        [Tooltip("What should run when the inv is shown?")]
+        [Tooltip("What should run when the main 'show inventory' event is triggered?")]
         public UnityEvent OnShowGridUi;
-        [Tooltip("What should run when the inv is hidden?")]
+        [Tooltip("What should run when the main 'hide inventory' event is triggered?")]
         public UnityEvent OnHideGridUi;
 
-        [Tooltip("Should anything run whenever an element gets focused on?")]
+        [Tooltip("Should anything external run whenever an element gets focused on?")]
         public UnityEvent<IGridUiElement> OnFocusedElementEntered;
-        [Tooltip("Should anything run whenever an element gets exited?")]
+        [Tooltip("Should anything external run whenever an element gets unfocused on?")]
         public UnityEvent<IGridUiElement> OnFocusedElementExited;
+        [Tooltip("Should anything external run whenever an element gets opened?")]
+        public UnityEvent<IGridUiElement> OnElementOpened;
+        [Tooltip("Should anything external run whenever an element gets closed?")]
+        public UnityEvent<IGridUiElement> OnElementClosed;
 
 
 
@@ -74,46 +79,27 @@ namespace dtsInventory
 
 
 
-
-        //externals
-
-
-        //Event methods
-        public void SetFocusedElement(IGridUiElement element)
+        private void PushCurrentFocusToStack()
         {
-            if (element == null)
-                return;
-            if (element == _focusedElement)
-                return;
-
             if (_focusedElement != null)
             {
-                ClearFocusedElement();
+                _focusStack.Add(_focusedElement);
             }
-
-            _focusedElement = element;
-            _focusedElement.FocusOnUi();
-            OnFocusedElementEntered?.Invoke(_focusedElement);
         }
-        public void ClearElementFromFocus(IGridUiElement element)
+
+        private IGridUiElement PullPreviousFocusFromStack()
         {
-            if (element == null) 
-                return;
-
-            if (_focusedElement == element)
+            if (_focusStack.Count > 0)
             {
-                ClearFocusedElement();
-                
-                //return focus to the default if it exists
-                if (_defaultFocus != null)
-                {
-                    IGridUiElement defaultElement = _defaultFocus.GetComponent<IGridUiElement>();
-                    if (defaultElement != element)
-                        SetFocusedElement(defaultElement);
-                }
+                IGridUiElement prevFocus = _focusStack[_focusStack.Count - 1];
+                _focusStack.RemoveAt(_focusStack.Count -1);
+                return prevFocus;
             }
+
+            return null;
+            
         }
-        public void ClearFocusedElement()
+        private void ClearFocusedElement()
         {
             if (_focusedElement == null)
                 return;
@@ -121,20 +107,107 @@ namespace dtsInventory
             IGridUiElement exitedElement = _focusedElement;
             _focusedElement = null;
             exitedElement.UnfocusOnUi();
+
+            //Debug.Log($"Unfocused element: {exitedElement.GetGameObject().name} ");
             OnFocusedElementExited?.Invoke(exitedElement);
 
         }
 
+        private void FocusOnNextInStack()
+        {
+            if ( _focusedElement == null)
+            {
+                _focusedElement = PullPreviousFocusFromStack();
+
+                if (_focusedElement != null)
+                    SetFocusedElement(_focusedElement);
+            }
+            
+        }
+
+
+        //externals
+
+
+        //Event methods
+        /// <summary>
+        /// Sets an opened element as the current focus. If an element is already being focused on, then it is unfocused (but not closed)
+        /// and is saved. More than one focus may be saved at a time. The latest saved focus get automatically refocused on when the current active focus gets cleared.
+        /// </summary>
+        /// <param name="element"></param>
+        public void SetFocusedElement(IGridUiElement element)
+        {
+            if (element == null)
+                return;
+            if (!element.IsShown())
+                return;
+
+            if (_focusedElement != null)
+            {
+                PushCurrentFocusToStack();
+                ClearFocusedElement();
+            }
+
+            _focusedElement = element;
+            _focusedElement.FocusOnUi();
+
+            //Debug.Log($"New element set as focus: {_focusedElement.GetGameObject().name}\n");
+            OnFocusedElementEntered?.Invoke(_focusedElement);
+        }
+        public void ClearElementFromCurrentFocus(IGridUiElement element)
+        {
+            if (element == null) 
+                return;
+
+            if (_focusedElement == element)
+                ClearFocusedElement();
+        }
+
+        /// <summary>
+        /// Automatically stops focusing on the hidden ui, and refocuses on the previously-opened Ui.
+        /// If no previous ui exists, then this the default object will attempt to be focused on.
+        /// </summary>
+        /// <param name="element"></param>
+        public void RespondToUiHidden(IGridUiElement element)
+        {
+            if (element == null)
+                return;
+
+            if (_focusStack.Contains(element))
+            {
+                //remove all occurences of the ui, if multiples exists somehow
+                while (_focusStack.Contains(element))
+                    _focusStack.Remove(element);
+            }
+
+            if (element == _focusedElement)
+            {
+                ClearElementFromCurrentFocus(element);
+                FocusOnNextInStack();
+            }
+
+            OnElementClosed?.Invoke(element);
+        }
+
+        /// <summary>
+        /// Automatically saves the current focus (if one exists) and begins focusing on the newly-opened ui.
+        /// </summary>
+        /// <param name="element"></param>
+        public void RespondToUiShown(IGridUiElement element)
+        {
+            if (element == null)
+                return;
+
+            SetFocusedElement(element);
+
+            OnElementOpened?.Invoke(element);
+        }
 
         public void RespondToInventoryHotkey()
         {
             if (!_isInventoryShowing)
             {
                 _isInventoryShowing = true;
-
-                if (_defaultFocus != null)
-                    SetFocusedElement(_defaultFocus.GetComponent<IGridUiElement>());
-
                 OnShowGridUi?.Invoke();
             }
                 
@@ -146,6 +219,7 @@ namespace dtsInventory
             }
                 
         }
+        public bool IsInventoryShowing() { return _isInventoryShowing; }
 
         public void RelayPrimaryInputToFocusedElement(Vector2 directionalInput)
         {
@@ -258,14 +332,24 @@ namespace dtsInventory
 
             _controller.SetFocusedElement(element);
         }
-        public static void ClearElementFromFocus(IGridUiElement element)
+        public static void ClearElementFromCurrentFocus(IGridUiElement element)
         {
             if (_controller == null)
                 return;
             if (element == null)
                 return;
 
-            _controller.ClearElementFromFocus(element);
+            _controller.ClearElementFromCurrentFocus(element);
+        }
+        public static void UpdateGIMOnShown(IGridUiElement element)
+        {
+            if (_controller != null)
+                _controller.RespondToUiShown(element);
+        }
+        public static void UpdateGIMOnHidden(IGridUiElement element)
+        {
+            if (_controller != null)
+                _controller.RespondToUiHidden(element);
         }
     }
 }

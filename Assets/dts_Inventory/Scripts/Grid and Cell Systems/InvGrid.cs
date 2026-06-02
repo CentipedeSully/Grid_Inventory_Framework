@@ -37,6 +37,7 @@ namespace dtsInventory
     public class InvGrid : MonoBehaviour, IGridUiElement
     {
         [Header("Settings")]
+        private bool _isShowing = false;
         [SerializeField] private Vector2Int _containerSize;
         [SerializeField] private Vector2 _cellSize;
         [Tooltip("Marks this inventory as a merchant, which (generally) limits the context options " +
@@ -3266,22 +3267,48 @@ namespace dtsInventory
 
         public void ShowUi()
         {
-            OnGridShown?.Invoke();
+            if (!_isShowing)
+            {
+                _isShowing = true;
+                UpdateGIMOnShown(this);
+                OnGridShown?.Invoke();
+                
+                
+            }
+                
         }
 
         public void HideUi()
         {
-            OnGridHidden?.Invoke();
+            if (_isShowing)
+            {
+                _isShowing = false;
+                UpdateGIMOnHidden(this);
+                OnGridHidden?.Invoke();
+                
+                
+            }
+            
         }
+        public void UpdateGIMOnShown(IGridUiElement self) { GIMHelper.UpdateGIMOnShown(this); }
+        public void UpdateGIMOnHidden(IGridUiElement self) { GIMHelper.UpdateGIMOnHidden(this); }
 
         public void FocusOnUi()
-        {
-            OnGridFocused?.Invoke();
+        {   
+            if (_isShowing)
+            {
+                OnGridFocused?.Invoke();
+            }
+            
         }
 
         public void UnfocusOnUi()
         {
-            OnGridUnfocused?.Invoke();
+            if (_isShowing)
+            {
+                OnGridUnfocused?.Invoke();
+            }
+            
         }
 
         public void RespondToSecondaryDirectionalInput(Vector2 input)
@@ -3303,6 +3330,13 @@ namespace dtsInventory
         {
             Debug.Log("Grid Detected 'heavy' right input");
         }
+
+        public bool IsShown()
+        {
+            return _isShowing;
+        }
+
+        
     }
 }
 

@@ -109,11 +109,11 @@ namespace dtsInventory
         //Internals
         private void SubToNumericalSelector()
         {
-            _numericalSelector.OnNumberSubmitted += ConfirmNumercialSelection;
+           // _numericalSelector.OnNumberSubmitted += ConfirmNumercialSelection;
         }
         private void UnsubFromNumericalSelector()
         {
-            _numericalSelector.OnNumberSubmitted -= ConfirmNumercialSelection;
+           // _numericalSelector.OnNumberSubmitted -= ConfirmNumercialSelection;
         }
 
         private void RebuildButtonNavigations()
@@ -323,7 +323,7 @@ namespace dtsInventory
         {
             if (_isWindowOpen)
             {
-                _numericalSelector.HideNumericalSelector();
+                //_numericalSelector.HideNumericalSelector();
                 //_transferMenuController.HideMenu();
                 HideOptionsWindow();
                 Debug.Log($"Returning to invInteracter. Context: {selectedOption}, Amount:{selectedAmount}");
@@ -488,7 +488,7 @@ namespace dtsInventory
                 return;
             }
 
-            _numericalSelector.ShowNumericalSelector(_minimumInteractionAmount,_maximumInteractionAmount);
+            //_numericalSelector.ShowNumericalSelector(_minimumInteractionAmount,_maximumInteractionAmount);
             _currentSelectedOption = specifiedOption;
 
             //if we're transferring or selling items, then draw the numerical selector alongside the selected tranferMenu's button
@@ -501,8 +501,8 @@ namespace dtsInventory
 
                 //set the merchant context now, before we clear it
                 //necessary to determine what price to display in the numerical selector [prices may vary from merchant to merchant]
-                if (specifiedOption == ContextOption.SellItem)
-                    _numericalSelector.SetMerchantContext(_specifiedContainer);
+                //if (specifiedOption == ContextOption.SellItem)
+                //    _numericalSelector.SetMerchantContext(_specifiedContainer);
 
                 _specifiedContainer = null;
 
@@ -533,11 +533,11 @@ namespace dtsInventory
             if (specifiedOption == ContextOption.BuyItem || specifiedOption == ContextOption.SellItem)
             {
                 //the currently hovered grid is the merchant, if we're in the 'buy' context
-                if (specifiedOption == ContextOption.BuyItem)
-                    _numericalSelector.SetMerchantContext(InvManagerHelper.GetContextualInvGrid());
+                //if (specifiedOption == ContextOption.BuyItem)
+                 //   _numericalSelector.SetMerchantContext(InvManagerHelper.GetContextualInvGrid());
 
-                _numericalSelector.SetItemDataContext(_itemData);
-                _numericalSelector.ShowCostUi(specifiedOption);
+                //_numericalSelector.SetItemDataContext(_itemData);
+                //_numericalSelector.ShowCostUi(specifiedOption);
             }
             
             
@@ -545,7 +545,7 @@ namespace dtsInventory
         public void CloseNumericalSelector()
         {
             _currentSelectedOption = ContextOption.None;
-            _numericalSelector.HideNumericalSelector();
+            //_numericalSelector.HideNumericalSelector();
 
             //if the transfer menu is open, undarken that first
             //if (ContextWindowHelper.IsTransferMenuOpen())
@@ -610,19 +610,19 @@ namespace dtsInventory
             if (_numericalSelector.IsNumericalSelectorOpen())
                 _numericalSelector.SubmitNumber();
         }
-        public void SetPointerMode(bool newState) { _numericalSelector.TogglePointerMode(newState); }
-        public bool PointerMode() { return _numericalSelector.IsInPointerMode(); }
-        public RectTransform GetConfirmBtnRectTransform() { return _numericalSelector.GetConfirmBtnRectTransform(); }
-        public RectTransform GetInputAreaRectTransform() { return _numericalSelector.GetTextNavAreaRectTransform(); }
+        //public void SetPointerMode(bool newState) { _numericalSelector.TogglePointerMode(newState); }
+        //public bool PointerMode() { return _numericalSelector.IsInPointerMode(); }
+        //public RectTransform GetConfirmBtnRectTransform() { return _numericalSelector.GetConfirmBtnRectTransform(); }
+        //public RectTransform GetInputAreaRectTransform() { return _numericalSelector.GetTextNavAreaRectTransform(); }
         //public RectTransform GetTransferMenuRectTransform() { return _transferMenuController.GetComponent<RectTransform>(); }
         public void FocusOnNumericalSelector()
         {   
-            _numericalSelector.FocusOnTextNavigationTarget();
+            //_numericalSelector.FocusOnTextNavigationTarget();
         }
-        public bool IsNumericalSelectorCurrentlyFocused()
-        {
-            return _numericalSelector.IsTextNavigationFocused();
-        }
+        //public bool IsNumericalSelectorCurrentlyFocused()
+        //{
+            //return _numericalSelector.IsTextNavigationFocused();
+        //}
         public void ShowTransferMenu(Vector3 position,ContextOption context)
         {
            // _transferMenuController.ShowMenu(position, context);
@@ -683,10 +683,10 @@ namespace dtsInventory
         public static void IncrementNumericalSelector(int amount) { _controller.IncrementNumericalSelector(amount); _controller.PlayValueChangeAudioFeedback(); }
         public static void DecrementNumericalSelector(int amount) {_controller.DecrementNumericalSelector(amount); _controller.PlayValueChangeAudioFeedback(); }
         public static void SubmitCurrentNumber() { _controller.SubmitCurrentNumericalSelection(); }
-        public static void SetPointerMode(bool newState) { _controller.SetPointerMode(newState); }
-        public static bool IsPointerModeActive() { return _controller.PointerMode(); }
+        //public static void SetPointerMode(bool newState) { _controller.SetPointerMode(newState); }
+        //public static bool IsPointerModeActive() { return _controller.PointerMode(); }
         public static void FocusOnNumericalSelector() { _controller.FocusOnNumericalSelector(); }
-        public static bool IsNumericalSelectorCurrentlyFocused() { return _controller.IsNumericalSelectorCurrentlyFocused(); }
+        //public static bool IsNumericalSelectorCurrentlyFocused() { return _controller.IsNumericalSelectorCurrentlyFocused(); }
         public static bool IsTransferMenuOpen() { return _controller.IsTransferMenuOpen(); }
         public static bool IsMenuDarkened() { return _controller.IsDarkened(); }
         public static void UndarkenContextMenu() { _controller.UndarkenContextMenu(); }

@@ -10,11 +10,10 @@ namespace dtsInventory
     {
         [SerializeField] private ContextOption _optionType = ContextOption.None;
         //[SerializeField] private ContextWindowController _contextWindowController;
-        [SerializeField] private ContextMenuController ContextMenuController;
 
         public UnityEvent<GridInvButton> OnPointerEnter;
         public UnityEvent<GridInvButton> OnPointerExit;
-
+        public UnityEvent<ContextualOptionDefinition> OnContextSelected;
 
        
 
@@ -30,6 +29,9 @@ namespace dtsInventory
 
             //_contextWindowController.MarkOptionAsSelected(GetComponent<Button>()); 
             //_contextWindowController.SpecifyAmount(_optionType); 
+
+            
+            OnContextSelected?.Invoke(this);
 
 
         }

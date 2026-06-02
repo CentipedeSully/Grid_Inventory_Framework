@@ -116,6 +116,12 @@ namespace dtsInventory
                 Debug.Log($"Gamma modifier status: {currentStatus}");
         }
 
+        //custom logs
+        public void LogCustomMessage(string message)
+        {
+            Debug.Log($"{message}");
+        }
+
 
     }
 }
