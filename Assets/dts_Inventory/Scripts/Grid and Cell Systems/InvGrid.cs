@@ -38,6 +38,7 @@ namespace dtsInventory
     {
         [Header("Settings")]
         private bool _isShowing = false;
+        private bool _isFocused = false;
         [SerializeField] private Vector2Int _containerSize;
         [SerializeField] private Vector2 _cellSize;
         [Tooltip("Marks this inventory as a merchant, which (generally) limits the context options " +
@@ -123,8 +124,17 @@ namespace dtsInventory
         public UnityEvent<InvGrid, (int, int)> OnCellHovered;
         public UnityEvent<InvGrid> OnHoveredCellCleared;
         public UnityEvent <HashSet<ContextOption>,(int,int),InvGrid> OnContextMenuRequested;
+
+        [Header("Item Action Events")]
         public UnityEvent OnStackPinned;
         public UnityEvent OnPinnedStackLost;
+        public UnityEvent<ItemData,int> OnItemUsed;
+        public UnityEvent<ItemData,int> OnItemDiscarded;
+        public UnityEvent<ItemData, int, InvGrid> OnItemTaken;
+        public UnityEvent<ItemData,int,InvGrid> OnItemTransferred;
+        public UnityEvent<ItemData,int,InvGrid> OnItemSold;
+        public UnityEvent<ItemData,int,InvGrid> OnItemBought;
+        
 
 
 
@@ -3157,66 +3167,7 @@ namespace dtsInventory
         }
         
 
-        //Debug
-        /// <summary>
-        /// Builds a readable string from a hashset of (int,int).
-        /// </summary>
-        /// <param name="positions">The Set of positions to make readable</param>
-        /// <returns>A readable string of (int,int)'s</returns>
-        public string StringifyPositions(HashSet<(int,int)> positions)
-        {
-            string log = "";
-            foreach (var position in positions)
-                log += position.ToString() + " ";
-            return log;
-        }
-
-        private void ListenForDebugCommands()
-        {
-            if (_cmdCheckIfSpaceExists)
-            {
-                _cmdCheckIfSpaceExists = false;
-
-                //reformat the param into the proper datatype
-                HashSet<(int,int)> excludeList = new HashSet<(int,int)> ();
-                foreach (Vector2Int position in _paramExcludePositionsList)
-                    excludeList.Add((position.x, position.y));
-
-                //Debug.Log($"Reformatted paramExcludePositionsList into hashset with {excludeList.Count} positions");
-                Debug.Log($"DoesSpaceExist for {_paramItemCount} item[{_paramItemData.name}]: {DoesSpaceExist(_paramItemData,_paramItemCount,excludeList)}");
-            }
-            if (_cmdMulticheckIfSpaceExists)
-            {
-                _cmdMulticheckIfSpaceExists = false;
-                Debug.Log($"Does Space Exist for List of queries: {DoesSpaceExist(_paramQueryList)}");
-            }
-            if (_cmdExpandGrid)
-            {
-                _cmdExpandGrid = false;
-                ExpandGrid(_paramContainerModifier.x,_paramContainerModifier.y);
-            }
-            if (_cmdReduceGrid)
-            {
-                _cmdReduceGrid = false;
-                ReduceGrid(_paramContainerModifier.x, _paramContainerModifier.y);
-            }
-
-            if (_cmdAddItem)
-            {
-                _cmdAddItem = false;
-                AddItem(_paramItemData, _paramItemCount);
-            }
-            if (_cmdClearFocusedCell)
-            {
-                _cmdClearFocusedCell = false;
-                ClearHoveredCell();
-            }
-            if (_cmdPinItem)
-            {
-                _cmdPinItem = false;
-                PinStack(_paramItemData,_paramItemCount);
-            }
-        }
+     
 
         public GameObject GetGameObject()
         {
@@ -3242,7 +3193,12 @@ namespace dtsInventory
 
         public void RespondToJumpHotkey()
         {
-            Debug.Log("Grid Detected jumpElement input");
+            Debug.Log($"Grid [{name}] Detected jumpElement input");
+
+            
+            if (!_alphaModifierPressed)
+                GIMHelper.FocusOnNextGrid();
+            else GIMHelper.FocusOnPreviousGrid();
         }
 
         public void RespondToEditHotkey()
@@ -3270,14 +3226,11 @@ namespace dtsInventory
             if (!_isShowing)
             {
                 _isShowing = true;
-                UpdateGIMOnShown(this);
                 OnGridShown?.Invoke();
-                
-                
+                UpdateGIMOnShown(this);
             }
                 
         }
-
         public void HideUi()
         {
             if (_isShowing)
@@ -3285,8 +3238,6 @@ namespace dtsInventory
                 _isShowing = false;
                 UpdateGIMOnHidden(this);
                 OnGridHidden?.Invoke();
-                
-                
             }
             
         }
@@ -3295,8 +3246,9 @@ namespace dtsInventory
 
         public void FocusOnUi()
         {   
-            if (_isShowing)
+            if (_isShowing && !_isFocused)
             {
+                _isFocused = true;
                 OnGridFocused?.Invoke();
             }
             
@@ -3304,8 +3256,9 @@ namespace dtsInventory
 
         public void UnfocusOnUi()
         {
-            if (_isShowing)
+            if (_isShowing && _isFocused)
             {
+                _isFocused = false;
                 OnGridUnfocused?.Invoke();
             }
             
@@ -3335,8 +3288,122 @@ namespace dtsInventory
         {
             return _isShowing;
         }
+        public bool IsFocused() { return _isFocused; }
 
-        
+        public void RespondToOrganizeContext(int amount)
+        {
+            //Debug.Log("Pin context detected.");
+            PinStack(amount);
+        }
+        public void RespondToUseContext(int amount)
+        {
+            Debug.Log("Use context detected");
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemUsed?.Invoke(itemTarget, amount);
+
+            
+        }
+        public void RespondToDiscardContext(int amount)
+        {
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemDiscarded?.Invoke(itemTarget, amount);
+        }
+        public void RespondToTransferContext(int amount)
+        {
+            /*
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemTransferred?.Invoke(itemTarget, amount, null);
+            */
+        }
+        public void RespondToTakeContext(int amount)
+        {
+            /*
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemTaken?.Invoke(itemTarget, amount, null);
+            */
+        }
+        public void RespondToSellContext(int amount)
+        {
+            /*
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemSold?.Invoke(itemTarget, amount, null);
+            */
+        }
+        public void RespondToBuyContext(int amount)
+        {
+            /*
+            ItemData itemTarget = GetStackItemData(_hoveredCell);
+            RemoveItem(_hoveredCell, amount);
+            OnItemBought?.Invoke(itemTarget, amount, null);
+            */
+        }
+
+
+        //Debug
+        /// <summary>
+        /// Builds a readable string from a hashset of (int,int).
+        /// </summary>
+        /// <param name="positions">The Set of positions to make readable</param>
+        /// <returns>A readable string of (int,int)'s</returns>
+        public string StringifyPositions(HashSet<(int, int)> positions)
+        {
+            string log = "";
+            foreach (var position in positions)
+                log += position.ToString() + " ";
+            return log;
+        }
+
+        private void ListenForDebugCommands()
+        {
+            if (_cmdCheckIfSpaceExists)
+            {
+                _cmdCheckIfSpaceExists = false;
+
+                //reformat the param into the proper datatype
+                HashSet<(int, int)> excludeList = new HashSet<(int, int)>();
+                foreach (Vector2Int position in _paramExcludePositionsList)
+                    excludeList.Add((position.x, position.y));
+
+                //Debug.Log($"Reformatted paramExcludePositionsList into hashset with {excludeList.Count} positions");
+                Debug.Log($"DoesSpaceExist for {_paramItemCount} item[{_paramItemData.name}]: {DoesSpaceExist(_paramItemData, _paramItemCount, excludeList)}");
+            }
+            if (_cmdMulticheckIfSpaceExists)
+            {
+                _cmdMulticheckIfSpaceExists = false;
+                Debug.Log($"Does Space Exist for List of queries: {DoesSpaceExist(_paramQueryList)}");
+            }
+            if (_cmdExpandGrid)
+            {
+                _cmdExpandGrid = false;
+                ExpandGrid(_paramContainerModifier.x, _paramContainerModifier.y);
+            }
+            if (_cmdReduceGrid)
+            {
+                _cmdReduceGrid = false;
+                ReduceGrid(_paramContainerModifier.x, _paramContainerModifier.y);
+            }
+
+            if (_cmdAddItem)
+            {
+                _cmdAddItem = false;
+                AddItem(_paramItemData, _paramItemCount);
+            }
+            if (_cmdClearFocusedCell)
+            {
+                _cmdClearFocusedCell = false;
+                ClearHoveredCell();
+            }
+            if (_cmdPinItem)
+            {
+                _cmdPinItem = false;
+                PinStack(_paramItemData, _paramItemCount);
+            }
+        }
     }
 }
 

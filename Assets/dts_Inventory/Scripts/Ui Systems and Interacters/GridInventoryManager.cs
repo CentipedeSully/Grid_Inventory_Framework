@@ -19,6 +19,7 @@ namespace dtsInventory
         void UnfocusOnUi();
 
         bool IsShown();
+        bool IsFocused();
 
         //elements dont NEED to respond to every binding if you're building your own elements.
         //Confirm, Back, and a single Directional response are highly recommended for a general navigation & selection experience, tho.
@@ -51,9 +52,12 @@ namespace dtsInventory
     {
         [Header("State Values")]
         private IGridUiElement _focusedElement = null;
-        [SerializeField] private bool _isInventoryShowing = false;
-        [SerializeField] private List<IGridUiElement> _focusStack = new List<IGridUiElement>();
-
+        private bool _isInventoryShowing = false;
+        private List<IGridUiElement> _focusStack = new List<IGridUiElement>();
+        private List<InvGrid> _openedGrids = new List<InvGrid>();
+        private List<InvGrid> _openedMerchantGrids = new List<InvGrid>();
+        private InvGrid _tempGrid = null;
+        private int _lastGridIndex = -1;
 
         //unity events
         [Tooltip("What should run when the main 'show inventory' event is triggered?")]
@@ -71,7 +75,7 @@ namespace dtsInventory
         public UnityEvent<IGridUiElement> OnElementClosed;
 
 
-
+        //monobehaviours
         private void Awake()
         {
             GIMHelper.SetGIM(this);
@@ -79,14 +83,19 @@ namespace dtsInventory
 
 
 
+
+
+        //internals
         private void PushCurrentFocusToStack()
         {
             if (_focusedElement != null)
             {
+                //remove the element if it already exists as a waiting element [dunno how this'll happen]
+                if (_focusStack.Contains(_focusedElement))
+                    _focusStack.Remove(_focusedElement);
                 _focusStack.Add(_focusedElement);
             }
         }
-
         private IGridUiElement PullPreviousFocusFromStack()
         {
             if (_focusStack.Count > 0)
@@ -112,7 +121,6 @@ namespace dtsInventory
             OnFocusedElementExited?.Invoke(exitedElement);
 
         }
-
         private void FocusOnNextInStack()
         {
             if ( _focusedElement == null)
@@ -124,12 +132,132 @@ namespace dtsInventory
             }
             
         }
+        private void TrackGrid(InvGrid detectedGrid)
+        {
+            if (detectedGrid == null)
+                return;
+
+            //only track new grids
+            if (!_openedGrids.Contains(detectedGrid))
+            {
+                _openedGrids.Add(detectedGrid);
+                Debug.Log($"Tracking grid: {detectedGrid.name}");
+
+                if (detectedGrid.IsMerchant())
+                {
+                    _openedMerchantGrids.Add(detectedGrid);
+                    Debug.Log("And it's a MERCHANT, too! Merchant tracked");
+                }
+            }
+        }
+        private void UntrackGrid(InvGrid grid)
+        {
+            if (_openedGrids.Contains(grid))
+            {
+                _openedGrids.Remove(grid);
+                Debug.Log($"Removed grid from tracked grids: {grid.name}");
+            }
+
+            if (_openedMerchantGrids.Contains(grid))
+            {
+                _openedMerchantGrids.Remove(grid);
+                Debug.Log($"And it's also a merchant. Merchant removed from tracked merchants {grid.name}");
+            }
+        }
+        
 
 
         //externals
+        public IGridUiElement GetCurrentFocus() { IGridUiElement focusCopy = _focusedElement; return focusCopy; }
+        public int GetOpenedGridCount() { return _openedGrids.Count; }
+        public int GetOpenedMerchantsCount() { return _openedMerchantGrids.Count; }
+        public void FocusOnGrid(IGridUiElement grid)
+        {
+            //ignore null values
+            if (grid == null) return;
+
+            //ignore redundant values
+            if (_focusedElement == grid)
+                return;
+
+            _tempGrid = grid.GetGameObject().GetComponent<InvGrid>();
+
+            //ignore elements that aren't grids
+            if (_tempGrid == null)
+                return;
+
+            //if we aren't yet tracking the grid, track it!
+            if (!_openedGrids.Contains(_tempGrid))
+                TrackGrid(_tempGrid);
+
+            //Set the grid as the new focus
+            SetFocusedElement(grid);
+
+            //clear the temp variable
+            _tempGrid = null;
+
+        }
+        public void FocusOnNextGrid()
+        {
+            if (_openedGrids.Count == 0)
+                return;
+
+            if (_openedGrids.Count == 1)
+            {
+                _lastGridIndex = 0;
+                FocusOnGrid(_openedGrids[_lastGridIndex]);
+            }
+
+            if (_openedGrids.Count > 1)
+            {
+                //see if our focused element is a grid
+                //if it's a grid, then go to that grid's neighbor (to the left)
+                _tempGrid = _focusedElement.GetGameObject().GetComponent<InvGrid>();
+                if (_tempGrid != null)
+                {
+
+                    //ensure we're wrapping back to the other end of the list if we cant go to the left anymore
+                    if (_openedGrids.IndexOf(_tempGrid) == 0)
+                        FocusOnGrid(_openedGrids[_openedGrids.Count - 1]);
+
+                    else
+                        FocusOnGrid(_openedGrids[_openedGrids.IndexOf(_tempGrid)-1]);
+                }
+            }
+        }
+        public void FocusOnPreviousGrid()
+        {
+            if (_openedGrids.Count == 0)
+                return;
+
+            if (_openedGrids.Count == 1)
+            {
+                _lastGridIndex = 0;
+                FocusOnGrid(_openedGrids[_lastGridIndex]);
+            }
+
+            if (_openedGrids.Count > 1)
+            {
+                //see if our focused element is a grid
+                //if it's a grid, then go to that grid's neighbor (to the RIGHT)
+                _tempGrid = _focusedElement.GetGameObject().GetComponent<InvGrid>();
+                if (_tempGrid != null)
+                {
+
+                    //ensure we're wrapping back to the other end of the list if we cant go to the RIGHT anymore
+                    if (_openedGrids.IndexOf(_tempGrid) == _openedGrids.Count - 1)
+                        FocusOnGrid(_openedGrids[0]);
+
+                    else
+                        FocusOnGrid(_openedGrids[_openedGrids.IndexOf(_tempGrid) + 1]);
+                }
+            }
+        }
 
 
-        //Event methods
+
+
+
         /// <summary>
         /// Sets an opened element as the current focus. If an element is already being focused on, then it is unfocused (but not closed)
         /// and is saved. More than one focus may be saved at a time. The latest saved focus get automatically refocused on when the current active focus gets cleared.
@@ -142,8 +270,18 @@ namespace dtsInventory
             if (!element.IsShown())
                 return;
 
+            //if the requested focus is already waiting in the stack
+            //then remove that element from the stack.
+            if (_focusStack.Contains(element))
+            {
+                //ensure all instances are removed
+                while (_focusStack.Contains(element))
+                    _focusStack.Remove(element);
+            }    
+
             if (_focusedElement != null)
             {
+
                 PushCurrentFocusToStack();
                 ClearFocusedElement();
             }
@@ -154,6 +292,13 @@ namespace dtsInventory
             //Debug.Log($"New element set as focus: {_focusedElement.GetGameObject().name}\n");
             OnFocusedElementEntered?.Invoke(_focusedElement);
         }
+
+        /// <summary>
+        /// Clears the provided element from being the focus (only if that element is the current focus).
+        /// If another previous focus still exists on the stack, then the waiting element is removed from the
+        /// stack and regains the focus.
+        /// </summary>
+        /// <param name="element"></param>
         public void ClearElementFromCurrentFocus(IGridUiElement element)
         {
             if (element == null) 
@@ -186,6 +331,14 @@ namespace dtsInventory
                 FocusOnNextInStack();
             }
 
+            //untrack the grid if the element is a grid
+            _tempGrid = element.GetGameObject().GetComponent<InvGrid>();
+            if (_tempGrid != null)
+            {
+                UntrackGrid(_tempGrid);
+                _tempGrid = null;
+            }
+
             OnElementClosed?.Invoke(element);
         }
 
@@ -199,6 +352,14 @@ namespace dtsInventory
                 return;
 
             SetFocusedElement(element);
+
+            //track the grid if the element is a grid
+            _tempGrid = element.GetGameObject().GetComponent<InvGrid>();
+            if (_tempGrid != null)
+            {
+                TrackGrid(_tempGrid);
+                _tempGrid = null;
+            }
 
             OnElementOpened?.Invoke(element);
         }
@@ -305,7 +466,7 @@ namespace dtsInventory
             if (_isInventoryShowing)
                 _focusedElement.ReadGammaInput(input);
         }
-
+        
     }
 
 
@@ -351,6 +512,14 @@ namespace dtsInventory
             if (_controller != null)
                 _controller.RespondToUiHidden(element);
         }
+
+
+        public static int GetOpenedGridsCount() { return _controller.GetOpenedGridCount(); }
+        public static int GetOpenedMerchantsCount() { return _controller.GetOpenedMerchantsCount(); }
+        public static void FocusOnGrid(IGridUiElement gridElement) { _controller.FocusOnGrid(gridElement); }
+        public static void FocusOnNextGrid() { _controller.FocusOnNextGrid(); }
+        public static void FocusOnPreviousGrid() { _controller.FocusOnPreviousGrid(); }
+        public static IGridUiElement GetCurrentFocus() { return _controller.GetCurrentFocus(); }
     }
 }
 

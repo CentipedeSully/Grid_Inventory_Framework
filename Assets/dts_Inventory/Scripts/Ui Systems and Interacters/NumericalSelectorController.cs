@@ -121,8 +121,9 @@ namespace dtsInventory
         public RectTransform GetRectTransform() { return GetComponent<RectTransform>(); }
         public void SubmitNumber()
         {
-            if (gameObject.activeSelf && _confirmReady)
+            if (_isShowing && _confirmReady)
             {
+                //Debug.Log($"submitting number: {_number}");
                 OnValueSubmitted.Invoke(_number);
             }
         }
@@ -165,9 +166,9 @@ namespace dtsInventory
                 gameObject.SetActive(true);
                 ResetNumber();
                 ResetConfirmDelay();
-
-                UpdateGIMOnShown(this);
                 OnUiShown?.Invoke();
+                UpdateGIMOnShown(this);
+                
             }
         }
 
@@ -280,10 +281,8 @@ namespace dtsInventory
             //...
         }
 
-        public bool IsShown()
-        {
-            return _isShowing;
-        }
+        public bool IsShown(){return _isShowing; }
+        public bool IsFocused() { return _isFocused; }
         
 
     }

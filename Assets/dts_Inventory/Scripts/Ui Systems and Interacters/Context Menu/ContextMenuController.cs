@@ -290,17 +290,21 @@ namespace dtsInventory
 
         private void TriggerInteractionEvent(int amountToInteractWith)
         {
+            //ebug.Log($"Triggering interaction event: {_selectedContextOption}");
             switch (_selectedContextOption)
             {
                 case ContextOption.OrganizeItem:
+                    //Debug.Log($"Organize Contextual Event firing");
                     OnOrganize?.Invoke(amountToInteractWith);
                     break;
 
                 case ContextOption.UseItem:
+                    //Debug.Log($"Use Contextual Event firing");
                     OnUse?.Invoke(amountToInteractWith);
                     break;
 
                 case ContextOption.DiscardItem:
+                    //Debug.Log($"Discard Contextual Event firing");
                     OnDiscard?.Invoke(amountToInteractWith);
                     break;
 
@@ -388,6 +392,7 @@ namespace dtsInventory
 
         public void RespondToNumericalSelection(int selectedValue)
         {
+            //Debug.Log($"Caught Submitted number; {selectedValue}");
             TriggerInteractionEvent(selectedValue);
         }
 
@@ -556,6 +561,7 @@ namespace dtsInventory
         {
             return _isShowing;
         }
+        public bool IsFocused() {  return _isFocused; }
     }
 }
 
