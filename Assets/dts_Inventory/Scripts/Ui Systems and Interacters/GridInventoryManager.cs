@@ -56,6 +56,7 @@ namespace dtsInventory
         private List<IGridUiElement> _focusStack = new List<IGridUiElement>();
         private List<InvGrid> _openedGrids = new List<InvGrid>();
         private List<InvGrid> _openedMerchantGrids = new List<InvGrid>();
+        private List<InvGrid> _personalGrids = new List<InvGrid>();
         private InvGrid _tempGrid = null;
         private int _lastGridIndex = -1;
 
@@ -169,8 +170,26 @@ namespace dtsInventory
 
         //externals
         public IGridUiElement GetCurrentFocus() { IGridUiElement focusCopy = _focusedElement; return focusCopy; }
-        public int GetOpenedGridCount() { return _openedGrids.Count; }
-        public int GetOpenedMerchantsCount() { return _openedMerchantGrids.Count; }
+        public int CountOpenedGrids() { return _openedGrids.Count; }
+        public int CountOpenedMerchants() { return _openedMerchantGrids.Count; }
+        public List<InvGrid> GetOpenedGridsList()
+        {
+            List<InvGrid> listCopy = new List<InvGrid>();
+
+            for (int i = 0; i < _openedGrids.Count; i++)
+                listCopy.Add(_openedGrids[i]);
+
+            return listCopy;
+        }
+        public List<InvGrid> GetOpenedMerchantsList()
+        {
+            List<InvGrid> listCopy = new List<InvGrid>();
+
+            for (int i = 0; i < _openedMerchantGrids.Count; i++)
+                listCopy.Add(_openedMerchantGrids[i]);
+
+            return listCopy;
+        }
         public void FocusOnGrid(IGridUiElement grid)
         {
             //ignore null values
@@ -253,7 +272,13 @@ namespace dtsInventory
                 }
             }
         }
+        public void SetGridAsPersonal(InvGrid grid)
+        {
+            if (grid == null)
+                return;
 
+            _personalGrids.Add(grid);
+        }
 
 
 
@@ -514,8 +539,10 @@ namespace dtsInventory
         }
 
 
-        public static int GetOpenedGridsCount() { return _controller.GetOpenedGridCount(); }
-        public static int GetOpenedMerchantsCount() { return _controller.GetOpenedMerchantsCount(); }
+        public static int CountOpenedGrids() { return _controller.CountOpenedGrids(); }
+        public static int CountOpenedMerchants() { return _controller.CountOpenedMerchants(); }
+        public static List<InvGrid> GetOpenedMerchantsList() { return _controller.GetOpenedMerchantsList(); }
+        public static List<InvGrid> GetOpenedGridsList() { return _controller.GetOpenedGridsList(); }
         public static void FocusOnGrid(IGridUiElement gridElement) { _controller.FocusOnGrid(gridElement); }
         public static void FocusOnNextGrid() { _controller.FocusOnNextGrid(); }
         public static void FocusOnPreviousGrid() { _controller.FocusOnPreviousGrid(); }

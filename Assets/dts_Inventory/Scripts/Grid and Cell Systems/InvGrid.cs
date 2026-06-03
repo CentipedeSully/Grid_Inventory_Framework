@@ -123,7 +123,8 @@ namespace dtsInventory
         public UnityEvent OnGridHidden;
         public UnityEvent<InvGrid, (int, int)> OnCellHovered;
         public UnityEvent<InvGrid> OnHoveredCellCleared;
-        public UnityEvent <HashSet<ContextOption>,(int,int),InvGrid> OnContextMenuRequested;
+        [Tooltip("Requests a context menu at this grid's provided position, passing another grid as an optional 'other grid' target if applicable.")]
+        public UnityEvent <HashSet<ContextOption>,(int,int),InvGrid,InvGrid> OnContextMenuRequested;
 
         [Header("Item Action Events")]
         public UnityEvent OnStackPinned;
@@ -1281,8 +1282,8 @@ namespace dtsInventory
                 return;
  
 
-            //allow auto-management of items if alpha-select was pressed
-            if (_alphaModifierPressed)
+            //allow auto-management of items if alpha-select was pressed (or if we're already holding something)
+            if (_alphaModifierPressed || _pinnedRectTransform != null)
             {
                 //Determine the confirm context: Pin or Place?
                 //are we pinning a stack?
@@ -1339,12 +1340,15 @@ namespace dtsInventory
                 //summon the context menu if the context is valid
                 if (IsCellOnGrid(_hoveredCell))
                 {
-                    //build the context
+                    //build the base context
                     HashSet<ContextOption> possibleoptions = GetStackItemData(_hoveredCell).ContextualOptions();
+
+                    //build an addon context, based on what grids are open.
+                    //...
 
 
                     if (possibleoptions.Count > 0)
-                        OnContextMenuRequested?.Invoke(possibleoptions, _hoveredCell, this);
+                        OnContextMenuRequested?.Invoke(possibleoptions, _hoveredCell, this,null);
                 }
             }
             

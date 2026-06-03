@@ -15,6 +15,13 @@ namespace dtsInventory
     {
         [SerializeField] private GameObject _contextMenu;
         [SerializeField] private RectTransform _btnOptionsContainer;
+        [Tooltip("Include any context options that require another external grid as a target to complete. For example:\n" +
+            "'Buy' is triggered in a grid and requires another grid location to store bought goods.\n" +
+            "'Sell' is triggered in a grid and requires another merchant grid to accept the goods. \n" +
+            "'Transfer' requires a target grid to transfer the specified items to.\n" +
+            "'Take' is triggered in nonPersonal grids, but still requires a reference to that personal grid to place the specified items.\n" +
+            "You don't need to reference the prevous 4 mentioned above in the collection, since they're built-in by default.")]
+        [SerializeField] private List<ContextOption> _otherMultiContainerContexts = new List<ContextOption>() { };
         private HashSet<ContextOption> _setOptions = new();
         private List<GridInvButton> _activeBtnOptions = new();
         private List<GridInvButton> _allBtnOptions = new();
@@ -36,27 +43,40 @@ namespace dtsInventory
         public UnityEvent OnContextSet;
 
         public UnityEvent<ContextOption,int,int> OnNumericalSelectorRequested;
+        public UnityEvent<List<InvGrid>> OnTransferMenuRequested;
+
 
         [Header("Contextual Events")]
         public UnityEvent<int> OnOrganize;
         public UnityEvent<int> OnUse;
         public UnityEvent<int> OnDiscard;
-        public UnityEvent<int> OnBuy;
-        public UnityEvent<int> OnSell;
-        public UnityEvent<int> OnTransfer;
-        public UnityEvent<int> OnTake;
+        [Tooltip("Given values are the amount bought, and where to send the bought goods")]
+        public UnityEvent<int,InvGrid> OnBuy;
+        [Tooltip("Given values are the amount sold, and where to send the sold goods")]
+        public UnityEvent<int, InvGrid> OnSell;
+        [Tooltip("Given values are the amount to transfer, and where to send the goods")]
+        public UnityEvent<int, InvGrid> OnTransfer;
+        [Tooltip("Given values are the amount to take, and where to send the taken goods. " +
+            "Take implies that the goods are going to some main personal container, where Transfer is more" +
+            " general and includes moving items from any container into any container.")]
+        public UnityEvent<int, InvGrid> OnTake;
         
 
         private (int, int) _positionContext = (-1,-1);
         private InvGrid _gridContext;
+        private InvGrid _otherGridTarget;
         private ContextOption _selectedContextOption = ContextOption.None;
         private Vector2Int _interactionRange = Vector2Int.one;
         private int _interactionAmount = 0;
-        
+        private ContextOption[] _defaultMultiContainerContextsArry = { ContextOption.TakeItem, ContextOption.TransferItem, ContextOption.BuyItem, ContextOption.SellItem };
+        private List<ContextOption> _defaultMultiContainerContexts = new();
 
         private void Awake()
         {
             DetectAllPossibleBtnOptions();
+
+            //cache the default contexts list for readability later
+            _defaultMultiContainerContexts.AddRange( _defaultMultiContainerContextsArry );
         }
 
 
@@ -113,6 +133,7 @@ namespace dtsInventory
         private void ClearContext()
         {
             _gridContext = null;
+            _otherGridTarget = null;
             _positionContext = (-1, -1);
             _setOptions.Clear();
             _selectedContextOption = ContextOption.None;
@@ -309,19 +330,19 @@ namespace dtsInventory
                     break;
 
                 case ContextOption.BuyItem:
-                    OnBuy?.Invoke(amountToInteractWith);
+                    OnBuy?.Invoke(amountToInteractWith,_otherGridTarget);
                     break;
 
                 case ContextOption.SellItem:
-                    OnSell?.Invoke(amountToInteractWith);
+                    OnSell?.Invoke(amountToInteractWith, _otherGridTarget);
                     break;
 
                 case ContextOption.TransferItem:
-                    OnTransfer?.Invoke(amountToInteractWith);
+                    OnTransfer?.Invoke(amountToInteractWith, _otherGridTarget);
                     break;
 
                 case ContextOption.TakeItem:
-                    OnTake?.Invoke(amountToInteractWith);
+                    OnTake?.Invoke(amountToInteractWith, _otherGridTarget);
                     break;
 
             }
@@ -378,6 +399,18 @@ namespace dtsInventory
             _interactionRange.x = 1;
             _interactionRange.y = _gridContext.GetStackValue(_positionContext);
 
+            
+            //handle cases where we need further context. Check if the selected context is a multiContainer context,
+            //and also ensure we summon the TransferMenu in case an 'other' grid context isn't yet set.
+            if ( (_otherMultiContainerContexts.Contains(_selectedContextOption) || _defaultMultiContainerContexts.Contains(_selectedContextOption)) 
+                && _otherGridTarget == null)
+            {
+                //currently this isn't quite right, but it's enough for debugging the menu itself
+                OnTransferMenuRequested?.Invoke(GIMHelper.GetOpenedGridsList());
+                return;
+            }
+
+            //otherwise,we have everything we need. All we need now is an interaction amount.
             //auto complete the interaction if you can only interact with 1
             if (_interactionRange.y == 1)
             {
@@ -396,8 +429,38 @@ namespace dtsInventory
             TriggerInteractionEvent(selectedValue);
         }
 
+        public void RespondToOtherGridContextSelection(InvGrid targetGrid)
+        {
+            if (!_isShowing)
+                return;
+            if (targetGrid == null)
+                return;
 
-        public void SetContext(HashSet<ContextOption> options,(int,int) position, InvGrid grid)
+            _otherGridTarget = targetGrid;
+
+            //determine if we need to also specify an amount
+            //auto complete the interaction if you can only interact with 1
+            //[our context should've already been set]
+            if (_interactionRange.y == 1)
+            {
+                _interactionAmount = 1;
+                TriggerInteractionEvent(_interactionAmount);
+            }
+
+            //otherwise show the numerical selector. Let the user choose how many to interact with.
+            else OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+        }
+
+        /// <summary>
+        /// Sets the context menu's context and then raises the OnContextSet event. 
+        /// </summary>
+        /// <param name="options">All valid options to show the user</param>
+        /// <param name="position">where to show the menu on the grid</param>
+        /// <param name="grid">the grid where the targeted item was chosen</param>
+        /// <param name="otherTargetInvGrid">(optional) The other grid to send the item(s), if the context requires a target destination.
+        ///  This may be ignored. If a context that requires another grid is selected, then another menu will show itself to allow the user
+        ///  to specify further. If this parameter is given now, then the other menu won't need to show itself and the context will happen normally.</param>
+        public void SetContext(HashSet<ContextOption> options,(int,int) position, InvGrid grid, InvGrid otherTargetInvGrid = null)
         {
             if (options == null)
                 return;
@@ -415,6 +478,12 @@ namespace dtsInventory
             {
                 _gridContext = grid;
                 _positionContext = position;
+
+                //this is optional. Not all contexts have an additional grid target
+                //this can also be specified later
+                if (otherTargetInvGrid != null)
+                    _otherGridTarget = otherTargetInvGrid;
+
                 SetMenuPosition(position, grid);
                 OnContextSet?.Invoke();
             }
@@ -423,6 +492,7 @@ namespace dtsInventory
 
 
         }
+
         public void SetMenuPosition((int,int) position, InvGrid grid)
         {
             RectTransform cellRectTransform = grid.GetCellObject(position).GetComponent<RectTransform>();
@@ -465,7 +535,7 @@ namespace dtsInventory
 
         public void FocusOnUi()
         {
-            if (!_isFocused)
+            if (!_isFocused && _isShowing)
             {
                 _isFocused = true;
                 OnUiFocused?.Invoke();
