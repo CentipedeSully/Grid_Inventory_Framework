@@ -42,8 +42,10 @@ namespace dtsInventory
         [SerializeField] private Vector2Int _containerSize;
         [SerializeField] private Vector2 _cellSize;
         [Tooltip("Marks this inventory as a merchant, which (generally) limits the context options " +
-            "to only merchant-specific options [ex: Buy]")]
+            "to only merchant-specific options [ex: Buy]. Do not mix with 'personal' grids.")]
         [SerializeField] private bool _isMerchant = false;
+        [Tooltip("Marks this inventory as belonging to the player.")]
+        [SerializeField] private bool _isPersonal = false;
         [SerializeField] private float _buyingFromThisMerchantPriceMultiplier = 1.5f;
         [SerializeField] private float _sellingToThisMerchantPriceMultiplier = .5f;
         [Tooltip("Blocks items from showing the 'Sell' context option while within this inventory. " +
@@ -124,7 +126,7 @@ namespace dtsInventory
         public UnityEvent<InvGrid, (int, int)> OnCellHovered;
         public UnityEvent<InvGrid> OnHoveredCellCleared;
         [Tooltip("Requests a context menu at this grid's provided position, passing another grid as an optional 'other grid' target if applicable.")]
-        public UnityEvent <HashSet<ContextOption>,(int,int),InvGrid,InvGrid> OnContextMenuRequested;
+        public UnityEvent <(int,int),InvGrid> OnContextMenuRequested;
 
         [Header("Item Action Events")]
         public UnityEvent OnStackPinned;
@@ -224,6 +226,11 @@ namespace dtsInventory
         private void Start()
         {
             InitializeGrid();
+
+            //tell GIM this grid belongs to the player
+            if (_isPersonal)
+                GIMHelper.TrackGridAsPersonal(this);
+
         }
 
         private void Update()
@@ -1337,19 +1344,7 @@ namespace dtsInventory
 
             else if (IsCellOccupied(_hoveredCell))
             {
-                //summon the context menu if the context is valid
-                if (IsCellOnGrid(_hoveredCell))
-                {
-                    //build the base context
-                    HashSet<ContextOption> possibleoptions = GetStackItemData(_hoveredCell).ContextualOptions();
-
-                    //build an addon context, based on what grids are open.
-                    //...
-
-
-                    if (possibleoptions.Count > 0)
-                        OnContextMenuRequested?.Invoke(possibleoptions, _hoveredCell, this,null);
-                }
+                OnContextMenuRequested?.Invoke(_hoveredCell, this);
             }
             
         }
@@ -1380,10 +1375,16 @@ namespace dtsInventory
         public void ForceRaiseBulkInvContentsChanged(List<InvContentsUpdate> updateList) { RaiseBulkInvContentsChangeEvent(updateList); }
 
         /// <summary>
-        /// Is this inventory marked as being a merchant? Merchant inventories (generally) only display the 'Buy' context Option.
+        /// Is this inventory marked as being a merchant? Merchant inventories (generally) only display the 'Buy' context Option, and
+        /// are tracked uniquely by the GIM (GridInventoryManager).
         /// </summary>
         /// <returns>True if yes. False otherwise</returns>
         public bool IsMerchant() {  return _isMerchant; }
+        /// <summary>
+        /// Is this inventory marked as belonging to the player? Personal inventories are tracked uniquely by the GIM (GridInventoryManager).
+        /// </summary>
+        /// <returns>True if yes. False otherwise</returns>
+        public bool IsPersonal() { return _isPersonal; }
         /// <summary>
         /// Should selling items from this inventory be a possible context option (when another merchant's inv is detected) 
         /// </summary>
@@ -3170,6 +3171,24 @@ namespace dtsInventory
             return GetAllStacks().Count() == 0;
         }
         
+
+        public void SetGridAsPersonal()
+        {
+            //ignore if the grid is already personal
+            if (_isPersonal)
+                return;
+
+            _isPersonal = true;
+            GIMHelper.TrackGridAsPersonal(this);
+        }
+        public void UnsetGridAsPersonal()
+        {
+            if (!_isPersonal)
+                return;
+
+            _isPersonal = false;
+            GIMHelper.StopTrackingGridAsPersonal(this);
+        }
 
      
 

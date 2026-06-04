@@ -22,7 +22,7 @@ namespace dtsInventory
             "'Take' is triggered in nonPersonal grids, but still requires a reference to that personal grid to place the specified items.\n" +
             "You don't need to reference the prevous 4 mentioned above in the collection, since they're built-in by default.")]
         [SerializeField] private List<ContextOption> _otherMultiContainerContexts = new List<ContextOption>() { };
-        private HashSet<ContextOption> _setOptions = new();
+        private HashSet<ContextOption> _inferredContextOptions = new();
         private List<GridInvButton> _activeBtnOptions = new();
         private List<GridInvButton> _allBtnOptions = new();
         private GridInvButton _hoveredBtn;
@@ -60,11 +60,16 @@ namespace dtsInventory
             "Take implies that the goods are going to some main personal container, where Transfer is more" +
             " general and includes moving items from any container into any container.")]
         public UnityEvent<int, InvGrid> OnTake;
-        
 
-        private (int, int) _positionContext = (-1,-1);
         private InvGrid _gridContext;
-        private InvGrid _otherGridTarget;
+        private (int, int) _positionContext;
+        private InvItem _itemContext;
+        
+        private InvGrid _selectedContextGridTarget;
+        private List<InvGrid> _takeContextGridTargets = new();      //all possible contexts for the transfer menu, cached [if 'take' selected]
+        private List<InvGrid> _transferContextGridTargets = new();  //all possible contexts for the transfer menu, cached [if 'transfer' selected]
+        private List<InvGrid> _buyContextGridTargets = new();       //all possible contexts for the transfer menu, cached [if 'buy' selected]
+        private List<InvGrid> _sellContextGridTargets = new();      //all possible contexts for the transfer menu, cached [if 'sell' selected]
         private ContextOption _selectedContextOption = ContextOption.None;
         private Vector2Int _interactionRange = Vector2Int.one;
         private int _interactionAmount = 0;
@@ -108,7 +113,7 @@ namespace dtsInventory
                 
                 ContextualOptionDefinition context = _allBtnOptions[i].gameObject.GetComponent<ContextualOptionDefinition>();
 
-                if (_setOptions.Contains(context.GetContextOption()))
+                if (_inferredContextOptions.Contains(context.GetContextOption()))
                 {
                     context.gameObject.SetActive(true);
                     optionCount++;
@@ -132,10 +137,16 @@ namespace dtsInventory
         }
         private void ClearContext()
         {
+            _inferredContextOptions.Clear();
+
             _gridContext = null;
-            _otherGridTarget = null;
-            _positionContext = (-1, -1);
-            _setOptions.Clear();
+            _itemContext = null;
+            _buyContextGridTargets.Clear();
+            _sellContextGridTargets.Clear();
+            _takeContextGridTargets.Clear();
+            _transferContextGridTargets.Clear();
+
+            _selectedContextGridTarget = null;
             _selectedContextOption = ContextOption.None;
             _interactionAmount = 0;
             _interactionRange = Vector2Int.one;
@@ -330,22 +341,169 @@ namespace dtsInventory
                     break;
 
                 case ContextOption.BuyItem:
-                    OnBuy?.Invoke(amountToInteractWith,_otherGridTarget);
+                    OnBuy?.Invoke(amountToInteractWith,_selectedContextGridTarget);
                     break;
 
                 case ContextOption.SellItem:
-                    OnSell?.Invoke(amountToInteractWith, _otherGridTarget);
+                    OnSell?.Invoke(amountToInteractWith, _selectedContextGridTarget);
                     break;
 
                 case ContextOption.TransferItem:
-                    OnTransfer?.Invoke(amountToInteractWith, _otherGridTarget);
+                    OnTransfer?.Invoke(amountToInteractWith, _selectedContextGridTarget);
                     break;
 
                 case ContextOption.TakeItem:
-                    OnTake?.Invoke(amountToInteractWith, _otherGridTarget);
+                    OnTake?.Invoke(amountToInteractWith, _selectedContextGridTarget);
                     break;
 
             }
+        }
+
+        /// <summary>
+        /// Reads the grid's personal contexts, the item's contexts at the given grid position, and creates a set of all the possible contexts.
+        /// </summary>
+        /// <param name="gridPosition"></param>
+        /// <param name="grid"></param>
+        /// <returns>A set of all the possible contexts a user may choose.</returns>
+        private HashSet<ContextOption> InferContextOptions(InvItem item, InvGrid grid)
+        {
+            HashSet<ContextOption> inferredOptions = new();
+
+            // you can only buy items if they're in a merchant's inventory
+            // you can't do anything else with them until you buy them
+            if (grid.IsMerchant())
+                inferredOptions.Add(ContextOption.BuyItem);
+
+            //otherwise you do whatever you want
+            //limited to the specific item's useability
+            else
+            {
+                //start with all of the item's base contexts enabled
+                foreach (ContextOption option in item.ItemData().ContextualOptions())
+                    inferredOptions.Add(option);
+
+                int openedGrids = GIMHelper.CountOpenedGrids();
+
+                int openedMerchants = GIMHelper.CountOpenedMerchants();
+                int openedNonMerchants = openedGrids - openedMerchants; //merchants are a subset of all opened grids. Subtract them.
+
+                int openedPersonalGrids = GIMHelper.CountOpenedPersonalGrids();
+                int openedNonPersonalGrids = openedGrids - openedPersonalGrids; //personal grids are a subset of all opened grids. Subtract them.
+
+                //Personal grids and merchants grids should always be mutually exclusive
+                //[Why would the player need to buy items from their own container?]
+
+
+                //disable 'sell' if the context isn't right
+                if (inferredOptions.Contains(ContextOption.SellItem))
+                {
+                    //disable selling if you can't sell items from this grid
+                    //also disable selling if no opened merchant grids exist to receive the items
+                    if (!grid.CanSellFromThisInventory() || openedMerchants < 1) //the selected grid will never be a merchant in this case
+                        inferredOptions.Remove(ContextOption.SellItem);
+                }
+
+                //transfer & take must always be added manually.
+                //Determine if either of those contexts are relevant.
+
+                //enable 'take' if we're grabing something from a nonPersonal grid (assuming the player has a place to store their possessions)
+                if (!grid.IsPersonal() && GIMHelper.CountPersonalGrids() > 0)
+                {   
+                    //save each personal grid as a potential 'take' context target
+                    foreach (InvGrid personalGrid in GIMHelper.GetPersonalGridsList())
+                        _takeContextGridTargets.Add(personalGrid);
+
+                    inferredOptions.Add(ContextOption.TakeItem);
+                }
+
+                //enable transfer in the following cases:
+                //if we're in a personal grid...
+                if (grid.IsPersonal() )
+                {
+                    //Allow transferring between personal grids (if multiple exist)
+                    if (GIMHelper.CountPersonalGrids() > 1)
+                    {
+                        foreach (InvGrid personalGrid in GIMHelper.GetPersonalGridsList())
+                        {
+                            //ignore the grid we're currently in
+                            if (personalGrid == grid)
+                                continue;
+
+                            //you may transfer to any other personal grid. Why wouldn't you be able to?
+                            if (!_transferContextGridTargets.Contains(personalGrid))
+                                _transferContextGridTargets.Add(personalGrid);
+
+                        }
+                    }
+
+                    //Allow transferring from the current personal grid to any opened nonPersonal, non merchant grid (that isn't the current grid)
+                    if (openedGrids > 1)
+                    {
+                        foreach (InvGrid openedGrid in GIMHelper.GetOpenedGridsList())
+                        {
+                            //ignore the grid we're currently in
+                            if (openedGrid == grid)
+                                continue;
+
+                            //ignore merchants
+                            if (openedGrid.IsMerchant())
+                                continue;
+
+                            //personalGrids are definitely 'transfer' targets, but
+                            //right now we're looking for nonPersonal grids
+                            if (openedGrid.IsPersonal())
+                                continue;
+
+                            //save the opened nonPersonal grid as a valid transfer context
+                            if (!_transferContextGridTargets.Contains(openedGrid))
+                                _transferContextGridTargets.Add(openedGrid);
+
+                        }
+                    }
+
+                    //add the transfer context if any transfer contexts exist
+                    if (_transferContextGridTargets.Count > 0)
+                        inferredOptions.Add(ContextOption.TransferItem);
+
+                }
+
+                //otherwise we're not in a personal grid, so
+                //we'll need to select context targets differently...
+                else
+                {
+                    //Only allow transferring from the current opened grid to another opened nonPersonal, non merchant grid
+                    if (openedGrids > 1)
+                    {
+                        foreach (InvGrid openedGrid in GIMHelper.GetOpenedGridsList())
+                        {
+                            //ignore the grid we're currently in
+                            if (openedGrid == grid)
+                                continue;
+
+                            //ignore merchants
+                            if (openedGrid.IsMerchant())
+                                continue;
+
+                            //personalGrids aren't transfer targets in this case
+                            if (openedGrid.IsPersonal())
+                                continue;
+
+                            //save the opened nonPersonal grid as a valid transfer context
+                            if (!_transferContextGridTargets.Contains(openedGrid))
+                                _transferContextGridTargets.Add(openedGrid);
+
+                        }
+
+                        //add the transfer context if any transfer contexts exist
+                        if (_transferContextGridTargets.Count > 0)
+                            inferredOptions.Add(ContextOption.TransferItem);
+                    }
+                }
+
+            }
+
+
+            return inferredOptions;
         }
 
 
@@ -403,7 +561,7 @@ namespace dtsInventory
             //handle cases where we need further context. Check if the selected context is a multiContainer context,
             //and also ensure we summon the TransferMenu in case an 'other' grid context isn't yet set.
             if ( (_otherMultiContainerContexts.Contains(_selectedContextOption) || _defaultMultiContainerContexts.Contains(_selectedContextOption)) 
-                && _otherGridTarget == null)
+                && _selectedContextGridTarget == null)
             {
                 //currently this isn't quite right, but it's enough for debugging the menu itself
                 OnTransferMenuRequested?.Invoke(GIMHelper.GetOpenedGridsList());
@@ -436,7 +594,7 @@ namespace dtsInventory
             if (targetGrid == null)
                 return;
 
-            _otherGridTarget = targetGrid;
+            _selectedContextGridTarget = targetGrid;
 
             //determine if we need to also specify an amount
             //auto complete the interaction if you can only interact with 1
@@ -460,29 +618,21 @@ namespace dtsInventory
         /// <param name="otherTargetInvGrid">(optional) The other grid to send the item(s), if the context requires a target destination.
         ///  This may be ignored. If a context that requires another grid is selected, then another menu will show itself to allow the user
         ///  to specify further. If this parameter is given now, then the other menu won't need to show itself and the context will happen normally.</param>
-        public void SetContext(HashSet<ContextOption> options,(int,int) position, InvGrid grid, InvGrid otherTargetInvGrid = null)
+        public void SetContext((int,int) position, InvGrid grid)
         {
-            if (options == null)
+            if (grid == null)
                 return;
-            if (options.Count < 1)
+            if (!grid.IsCellOnGrid(position))
                 return;
 
-            _setOptions.Clear();
+            _inferredContextOptions.Clear();
+            _inferredContextOptions = InferContextOptions(grid.GetInvItemOnCell(position), grid);
 
-            //copy the provided set, to avoid accidental editing of the reference
-            foreach (ContextOption option in options)
-                _setOptions.Add(option);
-
-
-            if (BuildMenu())
+            if (BuildMenu())//returns true if the build succeeded (no empty menus are allowed)
             {
                 _gridContext = grid;
                 _positionContext = position;
-
-                //this is optional. Not all contexts have an additional grid target
-                //this can also be specified later
-                if (otherTargetInvGrid != null)
-                    _otherGridTarget = otherTargetInvGrid;
+                _itemContext = grid.GetInvItemOnCell(position);
 
                 SetMenuPosition(position, grid);
                 OnContextSet?.Invoke();

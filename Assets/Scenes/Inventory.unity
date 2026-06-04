@@ -3154,6 +3154,7 @@ MonoBehaviour:
   _containerSize: {x: 8, y: 6}
   _cellSize: {x: 32, y: 32}
   _isMerchant: 0
+  _isPersonal: 0
   _buyingFromThisMerchantPriceMultiplier: 1.5
   _sellingToThisMerchantPriceMultiplier: 0.5
   _canSellFromThisInv: 1
@@ -6710,6 +6711,7 @@ MonoBehaviour:
   _containerSize: {x: 8, y: 6}
   _cellSize: {x: 32, y: 32}
   _isMerchant: 0
+  _isPersonal: 0
   _buyingFromThisMerchantPriceMultiplier: 1.5
   _sellingToThisMerchantPriceMultiplier: 0.5
   _canSellFromThisInv: 1
@@ -13918,6 +13920,7 @@ MonoBehaviour:
   _containerSize: {x: 8, y: 6}
   _cellSize: {x: 32, y: 32}
   _isMerchant: 0
+  _isPersonal: 1
   _buyingFromThisMerchantPriceMultiplier: 1.5
   _sellingToThisMerchantPriceMultiplier: 0.5
   _canSellFromThisInv: 1

@@ -56,7 +56,8 @@ namespace dtsInventory
         private List<IGridUiElement> _focusStack = new List<IGridUiElement>();
         private List<InvGrid> _openedGrids = new List<InvGrid>();
         private List<InvGrid> _openedMerchantGrids = new List<InvGrid>();
-        private List<InvGrid> _personalGrids = new List<InvGrid>();
+        private List<InvGrid> _openedPersonalGrids = new List<InvGrid>();
+        private List<InvGrid> _personalGrids = new List<InvGrid>(); //we should know about all personal grids, whether or not they're opened.
         private InvGrid _tempGrid = null;
         private int _lastGridIndex = -1;
 
@@ -133,7 +134,7 @@ namespace dtsInventory
             }
             
         }
-        private void TrackGrid(InvGrid detectedGrid)
+        private void TrackOpenedGrid(InvGrid detectedGrid)
         {
             if (detectedGrid == null)
                 return;
@@ -142,27 +143,43 @@ namespace dtsInventory
             if (!_openedGrids.Contains(detectedGrid))
             {
                 _openedGrids.Add(detectedGrid);
-                Debug.Log($"Tracking grid: {detectedGrid.name}");
+                //Debug.Log($"Tracking grid: {detectedGrid.name}");
 
                 if (detectedGrid.IsMerchant())
                 {
                     _openedMerchantGrids.Add(detectedGrid);
-                    Debug.Log("And it's a MERCHANT, too! Merchant tracked");
+                    //Debug.Log("And it's a MERCHANT, too! Merchant tracked");
+                    if (detectedGrid.IsPersonal())
+                        Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
+                }
+
+                if (detectedGrid.IsPersonal())
+                {
+                    _openedPersonalGrids.Add(detectedGrid);
+                    Debug.Log("And it's marked as PERSONAL. Personal invntory tracked");
+                    if (detectedGrid.IsMerchant())
+                        Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
                 }
             }
         }
-        private void UntrackGrid(InvGrid grid)
+        private void UntrackOpenedGrid(InvGrid grid)
         {
             if (_openedGrids.Contains(grid))
             {
                 _openedGrids.Remove(grid);
-                Debug.Log($"Removed grid from tracked grids: {grid.name}");
+                //Debug.Log($"Removed grid from tracked grids: {grid.name}");
             }
 
             if (_openedMerchantGrids.Contains(grid))
             {
                 _openedMerchantGrids.Remove(grid);
-                Debug.Log($"And it's also a merchant. Merchant removed from tracked merchants {grid.name}");
+                //Debug.Log($"Removed merchant from tracked merchants {grid.name}");
+            }
+
+            if (_openedPersonalGrids.Contains(grid))
+            {
+                _openedPersonalGrids.Remove(grid);
+                Debug.Log($"Removed personal from tracked personals {grid.name}");
             }
         }
         
@@ -172,6 +189,8 @@ namespace dtsInventory
         public IGridUiElement GetCurrentFocus() { IGridUiElement focusCopy = _focusedElement; return focusCopy; }
         public int CountOpenedGrids() { return _openedGrids.Count; }
         public int CountOpenedMerchants() { return _openedMerchantGrids.Count; }
+        public int CountOpenedPersonalGrids() { return _openedPersonalGrids.Count; }
+        public int CountPersonalGrids() { return _personalGrids.Count; }
         public List<InvGrid> GetOpenedGridsList()
         {
             List<InvGrid> listCopy = new List<InvGrid>();
@@ -187,6 +206,24 @@ namespace dtsInventory
 
             for (int i = 0; i < _openedMerchantGrids.Count; i++)
                 listCopy.Add(_openedMerchantGrids[i]);
+
+            return listCopy;
+        }
+        public List<InvGrid> GetOpenedPersonalGridsList()
+        {
+            List<InvGrid> listCopy = new List<InvGrid>();
+
+            for (int i = 0; i < _openedPersonalGrids.Count; i++)
+                listCopy.Add(_openedPersonalGrids[i]);
+
+            return listCopy;
+        }
+        public List<InvGrid> GetPersonalGridsList()
+        {
+            List<InvGrid> listCopy = new List<InvGrid>();
+
+            for (int i = 0; i < _personalGrids.Count; i++)
+                listCopy.Add(_personalGrids[i]);
 
             return listCopy;
         }
@@ -207,7 +244,7 @@ namespace dtsInventory
 
             //if we aren't yet tracking the grid, track it!
             if (!_openedGrids.Contains(_tempGrid))
-                TrackGrid(_tempGrid);
+                TrackOpenedGrid(_tempGrid);
 
             //Set the grid as the new focus
             SetFocusedElement(grid);
@@ -272,14 +309,40 @@ namespace dtsInventory
                 }
             }
         }
-        public void SetGridAsPersonal(InvGrid grid)
+        public void TrackGridAsPersonal(InvGrid grid)
         {
             if (grid == null)
                 return;
 
-            _personalGrids.Add(grid);
-        }
+            if (!_personalGrids.Contains(grid))
+            {
+                _personalGrids.Add(grid);
 
+                //update our openedGrids utility if this grid is also already showing before it got marked as 'personal'.
+                if (grid.IsShown())
+                {
+                    _openedPersonalGrids.Add(grid);
+                    Debug.Log("Updated an opened grid as personal [when it wasn't personal upon opening]");
+                }
+            }
+        }
+        public void StopTrackingGridAsPersonal(InvGrid grid)
+        {
+            if (grid == null)
+                return;
+
+            if (_personalGrids.Contains(grid))
+            {
+                _personalGrids.Remove(grid);
+
+                //update our openedGrids utility if this grid is showing.
+                if (grid.IsShown())
+                {
+                    _openedPersonalGrids.Remove(grid);
+                    Debug.Log("Updated an opened grid as no longer personal.");
+                }
+            }
+        }
 
 
 
@@ -360,7 +423,7 @@ namespace dtsInventory
             _tempGrid = element.GetGameObject().GetComponent<InvGrid>();
             if (_tempGrid != null)
             {
-                UntrackGrid(_tempGrid);
+                UntrackOpenedGrid(_tempGrid);
                 _tempGrid = null;
             }
 
@@ -382,13 +445,17 @@ namespace dtsInventory
             _tempGrid = element.GetGameObject().GetComponent<InvGrid>();
             if (_tempGrid != null)
             {
-                TrackGrid(_tempGrid);
+                TrackOpenedGrid(_tempGrid);
                 _tempGrid = null;
             }
 
             OnElementOpened?.Invoke(element);
         }
 
+        public bool IsInventoryShowing() { return _isInventoryShowing; }
+
+
+        //input-related
         public void RespondToInventoryHotkey()
         {
             if (!_isInventoryShowing)
@@ -405,7 +472,6 @@ namespace dtsInventory
             }
                 
         }
-        public bool IsInventoryShowing() { return _isInventoryShowing; }
 
         public void RelayPrimaryInputToFocusedElement(Vector2 directionalInput)
         {
@@ -465,7 +531,6 @@ namespace dtsInventory
             if (_isInventoryShowing)
                 _focusedElement.RespondToEditHotkey();
         }
-
 
         public void RelayAlphaToFocusedElement(bool input)
         {
@@ -541,8 +606,15 @@ namespace dtsInventory
 
         public static int CountOpenedGrids() { return _controller.CountOpenedGrids(); }
         public static int CountOpenedMerchants() { return _controller.CountOpenedMerchants(); }
+        public static int CountOpenedPersonalGrids() { return _controller.CountOpenedPersonalGrids(); }
+        public static int CountPersonalGrids() { return _controller.CountPersonalGrids(); }
         public static List<InvGrid> GetOpenedMerchantsList() { return _controller.GetOpenedMerchantsList(); }
         public static List<InvGrid> GetOpenedGridsList() { return _controller.GetOpenedGridsList(); }
+        public static List<InvGrid> GetOpenedPersonalGridsList() { return _controller.GetOpenedPersonalGridsList(); }
+        public static List<InvGrid> GetPersonalGridsList() { return _controller.GetPersonalGridsList(); }
+        public static void TrackGridAsPersonal(InvGrid grid) { _controller.TrackGridAsPersonal(grid); }
+        public static void StopTrackingGridAsPersonal(InvGrid grid) { _controller.StopTrackingGridAsPersonal(grid); }
+        public static void UntrackGrid(InvGrid grid) { _controller.TrackGridAsPersonal(grid); }
         public static void FocusOnGrid(IGridUiElement gridElement) { _controller.FocusOnGrid(gridElement); }
         public static void FocusOnNextGrid() { _controller.FocusOnNextGrid(); }
         public static void FocusOnPreviousGrid() { _controller.FocusOnPreviousGrid(); }
