@@ -42,24 +42,29 @@ namespace dtsInventory
         public UnityEvent OnMenuRebuilt;
         public UnityEvent OnContextSet;
 
+        [Tooltip("Provides the chosen contextOption, the minimum value to show in the counter, and the maximum value to show in the counter.")]
         public UnityEvent<ContextOption,int,int> OnNumericalSelectorRequested;
-        public UnityEvent<List<InvGrid>> OnTransferMenuRequested;
+        [Tooltip("Provides the itemData that may potentially get transferred, the stack size at the context's position, and a list of contextually-valid containers.")]
+        public UnityEvent<ItemData,int,List<InvGrid>> OnTransferMenuRequested;
 
 
-        [Header("Contextual Events")]
-        public UnityEvent<int> OnOrganize;
-        public UnityEvent<int> OnUse;
-        public UnityEvent<int> OnDiscard;
-        [Tooltip("Given values are the amount bought, and where to send the bought goods")]
-        public UnityEvent<int,InvGrid> OnBuy;
-        [Tooltip("Given values are the amount sold, and where to send the sold goods")]
-        public UnityEvent<int, InvGrid> OnSell;
-        [Tooltip("Given values are the amount to transfer, and where to send the goods")]
-        public UnityEvent<int, InvGrid> OnTransfer;
-        [Tooltip("Given values are the amount to take, and where to send the taken goods. " +
+        [Header("Contextual Events (these trigger before the context is executed)")]
+        [Tooltip("Given values are the amount organized/pinned, and what grid started the event")]
+        public UnityEvent<int,InvGrid> OnOrganizeTriggered;
+        [Tooltip("Given values are the amount used, and what grid started the event")]
+        public UnityEvent<int, InvGrid> OnUseTriggered;
+        [Tooltip("Given values are the amount Discarded, and what grid started the event")]
+        public UnityEvent<int, InvGrid> OnDiscardTriggered;
+        [Tooltip("Given values are the amount bought, what grid started the event, and where to send the bought goods")]
+        public UnityEvent<int,InvGrid, InvGrid> OnBuyTriggered;
+        [Tooltip("Given values are the amount sold, what grid started the event,and where to send the sold goods")]
+        public UnityEvent<int, InvGrid, InvGrid> OnSellTriggered;
+        [Tooltip("Given values are the amount to transfer, what grid started the event, and where to send the goods")]
+        public UnityEvent<int, InvGrid, InvGrid> OnTransferTriggered;
+        [Tooltip("Given values are the amount to take, what grid started the event, and where to send the taken goods. " +
             "Take implies that the goods are going to some main personal container, where Transfer is more" +
             " general and includes moving items from any container into any container.")]
-        public UnityEvent<int, InvGrid> OnTake;
+        public UnityEvent<int, InvGrid, InvGrid> OnTakeTriggered;
 
         private InvGrid _gridContext;
         private (int, int) _positionContext;
@@ -75,6 +80,7 @@ namespace dtsInventory
         private int _interactionAmount = 0;
         private ContextOption[] _defaultMultiContainerContextsArry = { ContextOption.TakeItem, ContextOption.TransferItem, ContextOption.BuyItem, ContextOption.SellItem };
         private List<ContextOption> _defaultMultiContainerContexts = new();
+        private List<InvGrid> _tempGridContextsCopy = new(); // used as a throwaway copy
 
         private void Awake()
         {
@@ -327,52 +333,76 @@ namespace dtsInventory
             {
                 case ContextOption.OrganizeItem:
                     //Debug.Log($"Organize Contextual Event firing");
-                    OnOrganize?.Invoke(amountToInteractWith);
+
+                    OnOrganizeTriggered?.Invoke(amountToInteractWith,_gridContext);
+                    _gridContext.RespondToOrganizeContext(amountToInteractWith);
+                    HideUi();
                     break;
 
                 case ContextOption.UseItem:
                     //Debug.Log($"Use Contextual Event firing");
-                    OnUse?.Invoke(amountToInteractWith);
+                    OnUseTriggered?.Invoke(amountToInteractWith, _gridContext);
+                    _gridContext.RespondToUseContext(amountToInteractWith);
+                    HideUi();
                     break;
 
                 case ContextOption.DiscardItem:
                     //Debug.Log($"Discard Contextual Event firing");
-                    OnDiscard?.Invoke(amountToInteractWith);
+                    OnDiscardTriggered?.Invoke(amountToInteractWith, _gridContext);
+                    _gridContext.RespondToDiscardContext(amountToInteractWith);
+                    HideUi();
                     break;
 
                 case ContextOption.BuyItem:
-                    OnBuy?.Invoke(amountToInteractWith,_selectedContextGridTarget);
+                    OnBuyTriggered?.Invoke(amountToInteractWith, _gridContext, _selectedContextGridTarget);
+                    _gridContext.RespondToBuyContext(amountToInteractWith,_selectedContextGridTarget);
+                    HideUi();
                     break;
 
                 case ContextOption.SellItem:
-                    OnSell?.Invoke(amountToInteractWith, _selectedContextGridTarget);
+                    OnSellTriggered?.Invoke(amountToInteractWith, _gridContext, _selectedContextGridTarget);
+                    _gridContext.RespondToSellContext(amountToInteractWith, _selectedContextGridTarget);
+                    HideUi();
                     break;
 
                 case ContextOption.TransferItem:
-                    OnTransfer?.Invoke(amountToInteractWith, _selectedContextGridTarget);
+                    OnTransferTriggered?.Invoke(amountToInteractWith, _gridContext, _selectedContextGridTarget);
+                    _gridContext.RespondToTransferContext(amountToInteractWith, _selectedContextGridTarget);
+                    HideUi();
                     break;
 
                 case ContextOption.TakeItem:
-                    OnTake?.Invoke(amountToInteractWith, _selectedContextGridTarget);
+                    OnTakeTriggered?.Invoke(amountToInteractWith, _gridContext, _selectedContextGridTarget);
+                    _gridContext.RespondToTakeContext(amountToInteractWith, _selectedContextGridTarget);
+                    HideUi();
                     break;
 
             }
         }
 
         /// <summary>
-        /// Reads the grid's personal contexts, the item's contexts at the given grid position, and creates a set of all the possible contexts.
+        /// Performs two tasks. Firstly this method reads the the current UI/Item environment and infers all possible contexts that the player may select from.
+        /// Secondly (and equally important) this method tracks the potential grid targets for each context that's possible (This happens behind the scenes, and 
+        /// this is necessary to perform contexts that involve moving items between multiple containers).
         /// </summary>
         /// <param name="gridPosition"></param>
         /// <param name="grid"></param>
         /// <returns>A set of all the possible contexts a user may choose.</returns>
-        private HashSet<ContextOption> InferContextOptions(InvItem item, InvGrid grid)
+        private HashSet<ContextOption> InferContextOptionsAndPotentialGridTargets(InvItem item, InvGrid grid)
         {
             HashSet<ContextOption> inferredOptions = new();
 
             // you can only buy items if they're in a merchant's inventory
             // you can't do anything else with them until you buy them
             if (grid.IsMerchant())
+            {
                 inferredOptions.Add(ContextOption.BuyItem);
+
+                //don't forget to infer where the user may wish to put any bought items.
+                //Every personal grid is a valid container for bought goods.
+                foreach (InvGrid personalGrid in GIMHelper.GetPersonalGridsList())
+                    _buyContextGridTargets.Add(personalGrid);
+            }
 
             //otherwise you do whatever you want
             //limited to the specific item's useability
@@ -401,6 +431,13 @@ namespace dtsInventory
                     //also disable selling if no opened merchant grids exist to receive the items
                     if (!grid.CanSellFromThisInventory() || openedMerchants < 1) //the selected grid will never be a merchant in this case
                         inferredOptions.Remove(ContextOption.SellItem);
+                    
+                    //otherwise, detect all the possible opened merchant-inventory targets we can sell to currently
+                    else
+                    {
+                        foreach(InvGrid merchantGrid in GIMHelper.GetOpenedMerchantsList())
+                            _sellContextGridTargets.Add(merchantGrid);
+                    }
                 }
 
                 //transfer & take must always be added manually.
@@ -552,32 +589,171 @@ namespace dtsInventory
                 return;
 
             _selectedContextOption = contextOption.GetContextOption();
-
-            //setup the numerical selector
-            _interactionRange.x = 1;
-            _interactionRange.y = _gridContext.GetStackValue(_positionContext);
-
             
-            //handle cases where we need further context. Check if the selected context is a multiContainer context,
-            //and also ensure we summon the TransferMenu in case an 'other' grid context isn't yet set.
+            //Now we'll specify the context further if necessary. Check if the selected context is a multiContainer context,
+            //and then after we've inferred all possible target containers, summon the transfer menu
             if ( (_otherMultiContainerContexts.Contains(_selectedContextOption) || _defaultMultiContainerContexts.Contains(_selectedContextOption)) 
                 && _selectedContextGridTarget == null)
             {
-                //currently this isn't quite right, but it's enough for debugging the menu itself
-                OnTransferMenuRequested?.Invoke(GIMHelper.GetOpenedGridsList());
-                return;
+                //Debug.Log("Correct Context Detected.");
+
+                int stackSize = _gridContext.GetStackValue(_positionContext);
+                //Debug.Log($"Hovered stack's size: {stackSize}");
+                _tempGridContextsCopy.Clear();
+
+                
+                //Now we'll provide the specific context with its respective possibleGridTargets (we inferred these targets when we built the menu)
+
+                switch (_selectedContextOption)
+                {
+                    case ContextOption.TakeItem:
+
+                        //CREATE A COPY TO SEND!! DO NOT END THE ACTUAL LIST REFERENCE!!
+                        //YOU KEEP DOING THAT XD
+                        //STOP IT!!!
+                        //[these classes often clear their utilities when they're hidden]
+                        //[if you send the ACTUAL REFERENCE TO THE LIST, the other class with clear it!]
+
+                        foreach (InvGrid gridContext in _takeContextGridTargets)
+                            _tempGridContextsCopy.Add(gridContext);
+
+                        if (_tempGridContextsCopy.Count > 1)
+                        {
+                            //Debug.Log($"Taking item: {_itemContext.ItemData().name}");
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            return;
+                        }
+                        else if (_tempGridContextsCopy.Count < 1)
+                        {
+                            Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.TakeItem}].");
+                            return;
+                        }
+
+                        //if only one option exists, no need to show the transfer menu.
+                        else
+                        {
+                            _selectedContextGridTarget = _tempGridContextsCopy[0];
+                            //Debug.Log($"Taking item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
+                            
+                            break;
+                        }
+                        
+
+                    case ContextOption.TransferItem:
+                        foreach (InvGrid gridContext in _transferContextGridTargets)
+                            _tempGridContextsCopy.Add(gridContext);
+
+                        if (_tempGridContextsCopy.Count > 1)
+                        {
+                            //Debug.Log($"Transferring item: {_itemContext.ItemData().name}");
+                            //Debug.Log($"Maximum amount to transfer: {stackSize}");
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            return;
+                        }
+
+                        else if (_tempGridContextsCopy.Count < 1)
+                        {
+                            Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.TransferItem}].");
+                            return;
+                        }
+
+                        //if only one option exists, no need to show the transfer menu.
+                        else
+                        {
+                            
+                            _selectedContextGridTarget = _tempGridContextsCopy[0];
+                            //Debug.Log($"Transferring item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
+                            break;
+                        }
+
+                    case ContextOption.BuyItem:
+                        foreach (InvGrid gridContext in _buyContextGridTargets)
+                            _tempGridContextsCopy.Add(gridContext);
+
+                        if (_tempGridContextsCopy.Count > 1)
+                        {
+                            //Debug.Log($"Buying item: {_itemContext.ItemData().name}");
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            return;
+                        }
+
+                        else if (_tempGridContextsCopy.Count < 1)
+                        {
+                            Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.BuyItem}].");
+                            return;
+                        }
+
+                        //if only one option exists, no need to show the transfer menu.
+                        else
+                        {
+                            _selectedContextGridTarget = _tempGridContextsCopy[0];
+                            //Debug.Log($"Buying item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
+                            break;
+                        }
+
+                    case ContextOption.SellItem:
+                        foreach (InvGrid gridContext in _sellContextGridTargets)
+                            _tempGridContextsCopy.Add(gridContext);
+
+                        if (_tempGridContextsCopy.Count > 1)
+                        {
+                            //Debug.Log($"Selling item: {_itemContext.ItemData().name}");
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            return;
+                        }
+
+                        else if (_tempGridContextsCopy.Count < 1)
+                        {
+                            Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.SellItem}].");
+                            return;
+                        }
+
+                        //if only one option exists, no need to show the transfer menu.
+                        else
+                        {
+                            _selectedContextGridTarget = _tempGridContextsCopy[0];
+                            //Debug.Log($"Selling item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
+                            
+                            break;
+                        }
+                }
             }
 
-            //otherwise,we have everything we need. All we need now is an interaction amount.
-            //auto complete the interaction if you can only interact with 1
-            if (_interactionRange.y == 1)
+            //With any multicontainer contexts, the max interaction value will be determined by the target grid's
+            //remaining capacity: basically, how much of the item can the target grid fit? This'll come up later,
+            //as a response to the Transfer menu's selection.
+
+            //since no multicontainer context was selected, we'll infer the min/max interaction values manually.
+            //setup the base Min and Max interaction values for the numerical selector
+            _interactionRange.x = 1;
+            _interactionRange.y = _gridContext.GetStackValue(_positionContext);
+
+            //Special contexts may also change the min/max interaction values
+            //It varies by context
+            if (contextOption.GetContextOption() == ContextOption.UseItem)
             {
-                _interactionAmount = 1;
+                //force the interaction max to 1 if the item disables 'bulk use'
+                if (!_itemContext.ItemData().IsBulkUseEnabled())
+                    _interactionRange.y = 1;
+            }
+
+            //otherwise,we have everything we need. All we need now is a specified interaction amount.
+            //auto complete the interaction if the min and max interaction limits are the same [both being 1 for example]
+            if (_interactionRange.x == _interactionRange.y)
+            {
+                _interactionAmount = _interactionRange.x;
+                //Debug.Log($"No need to request numerical selector. Parameters: context:{_selectedContextOption} , amount:{_interactionAmount}");
+
+                
                 TriggerInteractionEvent(_interactionAmount);
             }
 
             //otherwise show the numerical selector. Let the user choose how many to interact with.
-            else OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+            else
+            {
+                //Debug.Log($"Requesting Numerical Selector with parameters: context:{_selectedContextOption} , amount range ({_interactionRange.x},{_interactionRange.y})");
+                OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+            }
 
         }
 
@@ -587,21 +763,24 @@ namespace dtsInventory
             TriggerInteractionEvent(selectedValue);
         }
 
-        public void RespondToOtherGridContextSelection(InvGrid targetGrid)
+        public void RespondToOtherGridContextSelection(InvGrid targetGrid, int interactionMaximum)
         {
             if (!_isShowing)
                 return;
             if (targetGrid == null)
                 return;
 
+
             _selectedContextGridTarget = targetGrid;
+            _interactionRange.x = 1;
+            _interactionRange.y = interactionMaximum; //this is determined by how many [items of the current context] can fit in the selected grid.
 
             //determine if we need to also specify an amount
-            //auto complete the interaction if you can only interact with 1
+            //auto complete the interaction if the min/max limits are equal
             //[our context should've already been set]
-            if (_interactionRange.y == 1)
+            if (_interactionRange.x == _interactionRange.y)
             {
-                _interactionAmount = 1;
+                _interactionAmount = _interactionRange.x;
                 TriggerInteractionEvent(_interactionAmount);
             }
 
@@ -626,7 +805,7 @@ namespace dtsInventory
                 return;
 
             _inferredContextOptions.Clear();
-            _inferredContextOptions = InferContextOptions(grid.GetInvItemOnCell(position), grid);
+            _inferredContextOptions = InferContextOptionsAndPotentialGridTargets(grid.GetInvItemOnCell(position), grid);
 
             if (BuildMenu())//returns true if the build succeeded (no empty menus are allowed)
             {

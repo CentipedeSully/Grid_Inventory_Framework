@@ -133,7 +133,9 @@ namespace dtsInventory
         public UnityEvent OnPinnedStackLost;
         public UnityEvent<ItemData,int> OnItemUsed;
         public UnityEvent<ItemData,int> OnItemDiscarded;
+        [Tooltip("Provides the item being taken, the amount being taken, and the receiver of the taken items")]
         public UnityEvent<ItemData, int, InvGrid> OnItemTaken;
+        [Tooltip("Provides the item being transferred, the amount being transferred, and the receiver of the transferred items")]
         public UnityEvent<ItemData,int,InvGrid> OnItemTransferred;
         public UnityEvent<ItemData,int,InvGrid> OnItemSold;
         public UnityEvent<ItemData,int,InvGrid> OnItemBought;
@@ -1721,7 +1723,7 @@ namespace dtsInventory
             {
 
                 //if we got down here, then we didn't find the full amount of items to fulfill the request. Raise a yellow alert. The User probably didn't check the item count beforehand.
-                Debug.LogWarning($"Failed to find {amount} items at position [({position.Item1},{position.Item2})]. Found {amount} items.");
+                Debug.LogWarning($"Failed to find {amount} items at position [({position.Item1},{position.Item2})]. Found {_stackCapacities[StackArea(position)]} items.");
                 return false;
             }
 
@@ -3333,23 +3335,29 @@ namespace dtsInventory
             RemoveItem(_hoveredCell, amount);
             OnItemDiscarded?.Invoke(itemTarget, amount);
         }
-        public void RespondToTransferContext(int amount)
+        public void RespondToTransferContext(int amount,InvGrid gridTarget)
         {
-            /*
             ItemData itemTarget = GetStackItemData(_hoveredCell);
             RemoveItem(_hoveredCell, amount);
-            OnItemTransferred?.Invoke(itemTarget, amount, null);
-            */
+            Debug.Log($"(invGrid) Transfer Response params: amount:{amount}, target grid:{gridTarget.name}, item:{itemTarget.name} ");
+            gridTarget.AddItem(itemTarget, amount);
+            OnItemTransferred?.Invoke(itemTarget, amount , gridTarget);
+            
         }
-        public void RespondToTakeContext(int amount)
+        public void RespondToTakeContext(int amount, InvGrid gridTarget)
         {
-            /*
+            Debug.Log($"responding grid: {name}");
+            Debug.Log($"hovered cell: {_hoveredCell}");
+            Debug.Log($"provided grid target: {gridTarget.name}");
+
             ItemData itemTarget = GetStackItemData(_hoveredCell);
+            Debug.Log($"Taking Items: {itemTarget.name} [{amount}]");
             RemoveItem(_hoveredCell, amount);
-            OnItemTaken?.Invoke(itemTarget, amount, null);
-            */
+            gridTarget.AddItem(itemTarget, amount);
+            OnItemTaken?.Invoke(itemTarget, amount, gridTarget);
+            
         }
-        public void RespondToSellContext(int amount)
+        public void RespondToSellContext(int amount, InvGrid gridTarget)
         {
             /*
             ItemData itemTarget = GetStackItemData(_hoveredCell);
@@ -3357,7 +3365,7 @@ namespace dtsInventory
             OnItemSold?.Invoke(itemTarget, amount, null);
             */
         }
-        public void RespondToBuyContext(int amount)
+        public void RespondToBuyContext(int amount, InvGrid gridTarget)
         {
             /*
             ItemData itemTarget = GetStackItemData(_hoveredCell);

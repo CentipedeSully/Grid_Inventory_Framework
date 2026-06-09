@@ -19,15 +19,19 @@ namespace dtsInventory
         [Header("Production")]
         [SerializeField] private TextMeshProUGUI _text;
         [SerializeField] private InvGrid _invGridReference;
+        [SerializeField] private int _detectedAvailableItemSpace = 0;
         [SerializeField] private TransferContextMenu _menu;
 
 
 
         public void SetInvGridReference(InvGrid gridReference) { _invGridReference = gridReference; }
+        public InvGrid GetInvGridReference() { return _invGridReference; }
         public void SetTransferMenuController(TransferMenuController controller) { _menuController = controller; }
+        public void SetDetectedAvaialableItemSpace(int availableSpace) { _detectedAvailableItemSpace = availableSpace; }
+        public int GetAvailableItemSpace() { return _detectedAvailableItemSpace; }
         public void SetButtonText(string newText) { _text.text = newText; }
         public void SetTransferMenu(TransferContextMenu menu) { _menu = menu; }
-        public void ConfirmThisSelection()
+        public void ConfirmSelectionToInvInteracter()
         {
             if (InvManagerHelper.IsInvSystemLocked())
                 return;
@@ -40,10 +44,10 @@ namespace dtsInventory
                 _menuController.SubmitSelection();
             }
         }
-        public void ConfirmSelection(InvGrid gridChoice)
+        public void ConfirmSelection()
         {
             if (_menu != null && _invGridReference != null)
-                _menu.RespondToMenuOptionSelection(gridChoice);
+                _menu.RespondToMenuOptionSelection(this);
             else
             {
                 string menuName = "[NULL]";
