@@ -3339,19 +3339,19 @@ namespace dtsInventory
         {
             ItemData itemTarget = GetStackItemData(_hoveredCell);
             RemoveItem(_hoveredCell, amount);
-            Debug.Log($"(invGrid) Transfer Response params: amount:{amount}, target grid:{gridTarget.name}, item:{itemTarget.name} ");
+            //Debug.Log($"(invGrid) Transfer Response params: amount:{amount}, target grid:{gridTarget.name}, item:{itemTarget.name} ");
             gridTarget.AddItem(itemTarget, amount);
             OnItemTransferred?.Invoke(itemTarget, amount , gridTarget);
             
         }
         public void RespondToTakeContext(int amount, InvGrid gridTarget)
         {
-            Debug.Log($"responding grid: {name}");
-            Debug.Log($"hovered cell: {_hoveredCell}");
-            Debug.Log($"provided grid target: {gridTarget.name}");
+            //Debug.Log($"responding grid: {name}");
+            //Debug.Log($"hovered cell: {_hoveredCell}");
+            //Debug.Log($"provided grid target: {gridTarget.name}");
 
             ItemData itemTarget = GetStackItemData(_hoveredCell);
-            Debug.Log($"Taking Items: {itemTarget.name} [{amount}]");
+            //Debug.Log($"Taking Items: {itemTarget.name} [{amount}]");
             RemoveItem(_hoveredCell, amount);
             gridTarget.AddItem(itemTarget, amount);
             OnItemTaken?.Invoke(itemTarget, amount, gridTarget);

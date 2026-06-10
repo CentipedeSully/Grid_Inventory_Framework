@@ -4,13 +4,15 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 
 
 namespace dtsInventory
 {
-    public class TransferOptionDefinition : MonoBehaviour
+    public class TransferOptionDefinition : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         [Header("Outdated")]
         [SerializeField] Text _buttonText;
@@ -21,6 +23,11 @@ namespace dtsInventory
         [SerializeField] private InvGrid _invGridReference;
         [SerializeField] private int _detectedAvailableItemSpace = 0;
         [SerializeField] private TransferContextMenu _menu;
+
+        [Header("Pointer Events")]
+        public UnityEvent OnHoverEntered;
+        public UnityEvent OnHoveredExited;
+        public UnityEvent OnClicked;
 
 
 
@@ -46,7 +53,7 @@ namespace dtsInventory
         }
         public void ConfirmSelection()
         {
-            if (_menu != null && _invGridReference != null)
+            if (_menu != null && _invGridReference != null && GetComponent<GridInvButton>().GetCurrentButtonState() != GIButtonState.Disabled)
                 _menu.RespondToMenuOptionSelection(this);
             else
             {
@@ -58,6 +65,35 @@ namespace dtsInventory
                     gridReference = _invGridReference.name;
                 Debug.LogWarning($"Null TransferOption value(s) detected:\nTransferMenu reference: {menuName}\nInvGrid reference: {gridReference}");
             }
+        }
+ 
+
+        public void CommunicateHoverEnterToMenu()
+        {
+            if (_menu != null)
+            {
+                Debug.Log("Hover detected");
+                _menu.RespondToPointerHoverOnBtn(GetComponent<GridInvButton>());
+            }
+        }
+        public void CommunicateHoverExitToMenu()
+        {
+            if (_menu != null)
+            {
+                Debug.Log("Exited Hover");
+                _menu.RespondToPointerExitedBtnHover(GetComponent<GridInvButton>());
+            }
+        }
+
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            OnHoveredExited?.Invoke();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            OnHoverEntered?.Invoke();
         }
     }
 }

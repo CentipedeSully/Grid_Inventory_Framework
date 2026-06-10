@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 
 namespace dtsInventory
@@ -42,10 +43,12 @@ namespace dtsInventory
         public UnityEvent OnMenuRebuilt;
         public UnityEvent OnContextSet;
 
-        [Tooltip("Provides the chosen contextOption, the minimum value to show in the counter, and the maximum value to show in the counter.")]
-        public UnityEvent<ContextOption,int,int> OnNumericalSelectorRequested;
-        [Tooltip("Provides the itemData that may potentially get transferred, the stack size at the context's position, and a list of contextually-valid containers.")]
-        public UnityEvent<ItemData,int,List<InvGrid>> OnTransferMenuRequested;
+        [Tooltip("Provides the chosen contextOption, the minimum value to show in the counter, the maximum value to show in the counter, " +
+            "and the position to spawn the menu.")]
+        public UnityEvent<ContextOption,int,int, Vector2> OnNumericalSelectorRequested;
+        [Tooltip("Provides the itemData that may potentially get transferred, the stack size at the context's position, a list of contextually-valid containers, " +
+            "and the position to spawn the menu.")]
+        public UnityEvent<ItemData,int,List<InvGrid>,Vector2> OnTransferMenuRequested;
 
 
         [Header("Contextual Events (these trigger before the context is executed)")]
@@ -592,8 +595,7 @@ namespace dtsInventory
             
             //Now we'll specify the context further if necessary. Check if the selected context is a multiContainer context,
             //and then after we've inferred all possible target containers, summon the transfer menu
-            if ( (_otherMultiContainerContexts.Contains(_selectedContextOption) || _defaultMultiContainerContexts.Contains(_selectedContextOption)) 
-                && _selectedContextGridTarget == null)
+            if ( _otherMultiContainerContexts.Contains(_selectedContextOption) || _defaultMultiContainerContexts.Contains(_selectedContextOption))
             {
                 //Debug.Log("Correct Context Detected.");
 
@@ -609,18 +611,14 @@ namespace dtsInventory
                     case ContextOption.TakeItem:
 
                         //CREATE A COPY TO SEND!! DO NOT END THE ACTUAL LIST REFERENCE!!
-                        //YOU KEEP DOING THAT XD
-                        //STOP IT!!!
-                        //[these classes often clear their utilities when they're hidden]
                         //[if you send the ACTUAL REFERENCE TO THE LIST, the other class with clear it!]
 
                         foreach (InvGrid gridContext in _takeContextGridTargets)
                             _tempGridContextsCopy.Add(gridContext);
 
-                        if (_tempGridContextsCopy.Count > 1)
+                        if (_tempGridContextsCopy.Count > 0)
                         {
-                            //Debug.Log($"Taking item: {_itemContext.ItemData().name}");
-                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy,GetComponent<RectTransform>().position);
                             return;
                         }
                         else if (_tempGridContextsCopy.Count < 1)
@@ -629,92 +627,69 @@ namespace dtsInventory
                             return;
                         }
 
-                        //if only one option exists, no need to show the transfer menu.
+                        //if only one option exists, no need to show the transfer menu. [auotskip the transfer menu]
+                        /* THIS DOESN'T WORK IF THE TARGET GRID IS FULL
                         else
                         {
                             _selectedContextGridTarget = _tempGridContextsCopy[0];
                             //Debug.Log($"Taking item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
                             
                             break;
-                        }
+                        }*/
+
+                        break;
                         
 
                     case ContextOption.TransferItem:
                         foreach (InvGrid gridContext in _transferContextGridTargets)
                             _tempGridContextsCopy.Add(gridContext);
 
-                        if (_tempGridContextsCopy.Count > 1)
+                        if (_tempGridContextsCopy.Count > 0)
                         {
                             //Debug.Log($"Transferring item: {_itemContext.ItemData().name}");
                             //Debug.Log($"Maximum amount to transfer: {stackSize}");
-                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy, GetComponent<RectTransform>().position);
                             return;
                         }
 
-                        else if (_tempGridContextsCopy.Count < 1)
+                        else
                         {
                             Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.TransferItem}].");
                             return;
-                        }
-
-                        //if only one option exists, no need to show the transfer menu.
-                        else
-                        {
-                            
-                            _selectedContextGridTarget = _tempGridContextsCopy[0];
-                            //Debug.Log($"Transferring item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
-                            break;
                         }
 
                     case ContextOption.BuyItem:
                         foreach (InvGrid gridContext in _buyContextGridTargets)
                             _tempGridContextsCopy.Add(gridContext);
 
-                        if (_tempGridContextsCopy.Count > 1)
+                        if (_tempGridContextsCopy.Count > 0)
                         {
                             //Debug.Log($"Buying item: {_itemContext.ItemData().name}");
-                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy, GetComponent<RectTransform>().position);
                             return;
                         }
 
-                        else if (_tempGridContextsCopy.Count < 1)
+                        else
                         {
                             Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.BuyItem}].");
                             return;
-                        }
-
-                        //if only one option exists, no need to show the transfer menu.
-                        else
-                        {
-                            _selectedContextGridTarget = _tempGridContextsCopy[0];
-                            //Debug.Log($"Buying item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
-                            break;
                         }
 
                     case ContextOption.SellItem:
                         foreach (InvGrid gridContext in _sellContextGridTargets)
                             _tempGridContextsCopy.Add(gridContext);
 
-                        if (_tempGridContextsCopy.Count > 1)
+                        if (_tempGridContextsCopy.Count > 0)
                         {
                             //Debug.Log($"Selling item: {_itemContext.ItemData().name}");
-                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy);
+                            OnTransferMenuRequested?.Invoke(_itemContext.ItemData(), stackSize, _tempGridContextsCopy, GetComponent<RectTransform>().position);
                             return;
                         }
 
-                        else if (_tempGridContextsCopy.Count < 1)
+                        else
                         {
                             Debug.LogWarning($"No valid gridContexts found. This shouldn't ever happen, any other valid grid context detection enables this context [{ContextOption.SellItem}].");
                             return;
-                        }
-
-                        //if only one option exists, no need to show the transfer menu.
-                        else
-                        {
-                            _selectedContextGridTarget = _tempGridContextsCopy[0];
-                            //Debug.Log($"Selling item (defaulting to the only grid context available, [{_selectedContextGridTarget}]): {_itemContext.ItemData().name}");
-                            
-                            break;
                         }
                 }
             }
@@ -752,7 +727,7 @@ namespace dtsInventory
             else
             {
                 //Debug.Log($"Requesting Numerical Selector with parameters: context:{_selectedContextOption} , amount range ({_interactionRange.x},{_interactionRange.y})");
-                OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+                OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y, GetComponent<RectTransform>().position);
             }
 
         }
@@ -785,7 +760,7 @@ namespace dtsInventory
             }
 
             //otherwise show the numerical selector. Let the user choose how many to interact with.
-            else OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y);
+            else OnNumericalSelectorRequested?.Invoke(_selectedContextOption, _interactionRange.x, _interactionRange.y, GetComponent<RectTransform>().position);
         }
 
         /// <summary>

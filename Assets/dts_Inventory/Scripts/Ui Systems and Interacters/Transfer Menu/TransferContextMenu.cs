@@ -2,6 +2,7 @@ using dtsInventory;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -14,8 +15,8 @@ namespace dtsInventory
         //Declarations
         [SerializeField] private GameObject _containerOptionPrefab;
         [SerializeField] private Transform _activeOptionsContainer;
-        [SerializeField]private List<GridInvButton> _activeButtons = new();
-        [SerializeField]private int _currentHoveredBtnIndex = -1;
+        private List<GridInvButton> _activeButtons = new();
+        private int _currentHoveredBtnIndex = -1;
         GridInvButton _hoveredBtn;
         //private 
         [SerializeField] private Transform _unusedOptionsContainer;
@@ -62,12 +63,13 @@ namespace dtsInventory
 
             //ensure the new btn is hovered
             _hoveredBtn = _activeButtons[index];
-            if (_hoveredBtn.GetCurrentButtonState()!= GIButtonState.Disabled)
+            if (_hoveredBtn.GetCurrentButtonState() != GIButtonState.Disabled)
                 _hoveredBtn.SetButtonState(GIButtonState.Highlighted);
             else
             {
-                //show feedback for when the hovered button is disabled explaining why it's disabled
-                //...
+                //Debug.Log($"Diabled Button Entered: {_hoveredBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text}");
+                //show that the button is hovered, despite it being disabled
+                _hoveredBtn.SetDisabledHoverEffect(true);
             }
             _currentHoveredBtnIndex = index;
 
@@ -83,7 +85,7 @@ namespace dtsInventory
                 else
                 {
                     //Clear the feedback for a highlighted, disabled button
-                    //...
+                    _hoveredBtn.SetDisabledHoverEffect(false);
                 }
                 _hoveredBtn = null;
                 
@@ -153,7 +155,8 @@ namespace dtsInventory
                         itemQueries.Add(itemQuery);
 
                         //check if the current number of items can fit in the grid
-                        queryResponses.Clear();
+                        if (queryResponses == null)
+                            queryResponses = new();
 
                         if (availableSpace > 0)
                             queryResponses = _gridContext[optionsBuilt].FindSpaceForItems(itemQueries);
@@ -163,7 +166,7 @@ namespace dtsInventory
 
                     //keep checking if there's space in the grid for the shrinking amount of items.
                     //break from checking when either we've found space, or we've reached zero
-                    while (queryResponses.Count == 0 && availableSpace > 0);
+                    while (queryResponses == null && availableSpace > 0);
 
 
                     GridInvButton button =  _tempOptionDef.GetComponent<GridInvButton>();
@@ -174,7 +177,9 @@ namespace dtsInventory
                     //disable the selection of grids that don't have enough space for the contextual item.
                     if (availableSpace == 0)
                     {
+                        //Debug.Log($"Button [{button.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text}] set to Disabled due to container not having enough space for the item context");
                         button.SetButtonState(GIButtonState.Disabled);
+                        button.SetDisabledLabel("Full");
                         _tempOptionDef.SetDetectedAvaialableItemSpace(availableSpace);
                     }
                     else
@@ -222,6 +227,7 @@ namespace dtsInventory
                 //determine the capacity of the grid
 
                 //start with the max transferrable value +1 [the do-while will decrement it on the first pass]
+                //If the full stack can't fit, then we'll find the largest value that can fit.
                 int availableSpace = _contextStackSize + 1;
 
                 //init the other utilities that we'll need
@@ -240,17 +246,17 @@ namespace dtsInventory
                     itemQueries.Add(itemQuery);
 
                     //check if the current number of items can fit in the grid
-                    queryResponses.Clear();
+                    if (queryResponses == null)
+                        queryResponses = new();
 
                     if (availableSpace > 0)
                         queryResponses = _gridContext[optionsBuilt].FindSpaceForItems(itemQueries);
-
 
                 }
 
                 //keep checking if there's space in the grid for the shrinking amount of items.
                 //break from checking when either we've found space, or we've reached zero
-                while (queryResponses.Count == 0 && availableSpace > 0);
+                while (queryResponses == null && availableSpace > 0);
 
 
                 GridInvButton button = _tempGameObject.GetComponent<GridInvButton>();
@@ -261,7 +267,9 @@ namespace dtsInventory
                 //disable the selection of grids that don't have enough space for the contextual item.
                 if (availableSpace == 0)
                 {
+                    //Debug.Log($"Button [{button.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text}] set to Disabled due to container not having enough space for the item context");
                     button.SetButtonState(GIButtonState.Disabled);
+                    button.SetDisabledLabel("Full");
                     _tempOptionDef.SetDetectedAvaialableItemSpace(availableSpace);
                 }
                 else
@@ -309,7 +317,7 @@ namespace dtsInventory
             _itemContext = itemContext;
             _contextStackSize = contextStackSize;
         }
-        public void RespondToTransferMenuRequest(ItemData itemContext, int stackSize,List<InvGrid> gridsToSelectFrom)
+        public void RespondToTransferMenuRequest(ItemData itemContext, int stackSize,List<InvGrid> gridsToSelectFrom,Vector2 menuPosition)
         {
             string gridContextsDebugString = "";
             foreach (InvGrid gridOption in gridsToSelectFrom)
@@ -348,6 +356,7 @@ namespace dtsInventory
                 return;
             }
 
+            GetComponent<RectTransform>().position = menuPosition;
             RebuildMenu();
         }
         public void RespondToMenuOptionSelection(TransferOptionDefinition selectedOption)
@@ -356,7 +365,7 @@ namespace dtsInventory
             if (_isFocused && _isShowing)
                 OnOptionSelected?.Invoke(selectedOption.GetInvGridReference(), selectedOption.GetAvailableItemSpace());
         }
-
+        
 
 
         public void ShowUi()
@@ -515,6 +524,45 @@ namespace dtsInventory
         public void UpdateGIMOnShown(IGridUiElement self)
         {
             GIMHelper.UpdateGIMOnShown(this);
+        }
+
+        public void RespondToPointerHoverOnBtn(GridInvButton hoveredBtn)
+        {
+
+            //don't respond if the menu isn't showing or isn't the ui's focus
+            if (!_isShowing || !_isFocused)
+                return;
+
+            if (_hoveredBtn == hoveredBtn)
+                return;
+
+            //update the current hovered btn if it exists within the active btn list
+            if (_activeButtons.Contains(hoveredBtn))
+            {
+                int index = _activeButtons.IndexOf(hoveredBtn);
+                SetButtonAsHovered(index);
+
+            }
+        }
+        public void RespondToPointerExitedBtnHover(GridInvButton exitedBtn)
+        {
+
+            //don't respond if the menu isn't showing or isn't the ui's focus
+            if (!_isShowing || !_isFocused)
+                return;
+
+            //update the exited button if it's not disabled
+            if (exitedBtn.GetCurrentButtonState() != GIButtonState.Disabled)
+                exitedBtn.SetButtonState(GIButtonState.Normal);
+
+            //if this exited button is our currently hovered btn, update our internal hovered-btn state
+            if (_hoveredBtn == exitedBtn)
+            {
+                _hoveredBtn = null;
+                _currentHoveredBtnIndex = -1;
+            }
+
+
         }
 
 

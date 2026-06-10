@@ -6,7 +6,29 @@ public class WindowSizeMatcher : MonoBehaviour
 {
     [SerializeField] private RectTransform _rectTransformToWatch;
     [SerializeField] private RectTransform _mimicRectTransform;
+    [SerializeField] private Vector2 _sizeOffset;
     private IEnumerator _endOfFrameRunner;
+    [SerializeField] private bool _runDuringUpdate = false;
+
+
+
+
+
+    private void Update()
+    {
+        if (_runDuringUpdate)
+        {
+            if (_rectTransformToWatch == null || _mimicRectTransform == null)
+                return;
+
+            if (_mimicRectTransform.sizeDelta != _rectTransformToWatch.sizeDelta + _sizeOffset)
+            {
+                UpdateMimic();
+            }
+        }
+    }
+
+
 
 
     [ContextMenu("Update Mimic RectTransform")]
@@ -20,7 +42,7 @@ public class WindowSizeMatcher : MonoBehaviour
                 StartCoroutine(_endOfFrameRunner);
             }
 
-            else _mimicRectTransform.sizeDelta = _rectTransformToWatch.sizeDelta;
+            else _mimicRectTransform.sizeDelta = _rectTransformToWatch.sizeDelta + _sizeOffset;
 
 
         }
@@ -30,7 +52,7 @@ public class WindowSizeMatcher : MonoBehaviour
     private IEnumerator UpdateAtEndOfFrame()
     {
         yield return new WaitForEndOfFrame();
-        _mimicRectTransform.sizeDelta = _rectTransformToWatch.sizeDelta;
+        _mimicRectTransform.sizeDelta = _rectTransformToWatch.sizeDelta + _sizeOffset;
         _endOfFrameRunner = null;
     }
 }

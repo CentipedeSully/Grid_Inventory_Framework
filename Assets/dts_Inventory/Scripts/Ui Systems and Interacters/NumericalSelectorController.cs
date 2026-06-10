@@ -112,9 +112,10 @@ namespace dtsInventory
             _minNumber = minValue;
             _maxNumber = maxValue;
         }
-        public void RespondToNumericalSelectRequest(ContextOption context, int minValue, int maxValue)
+        public void RespondToNumericalSelectRequest(ContextOption context, int minValue, int maxValue,Vector2 menuPosition)
         {
             SetContext(context, minValue, maxValue);
+            GetComponent<RectTransform>().position = menuPosition;
             ShowUi();
         }
 
