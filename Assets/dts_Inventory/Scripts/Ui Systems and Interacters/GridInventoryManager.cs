@@ -21,8 +21,13 @@ namespace dtsInventory
         bool IsShown();
         bool IsFocused();
 
-        //elements dont NEED to respond to every binding if you're building your own elements.
+        //elements dont NEED to respond to every binding.
         //Confirm, Back, and a single Directional response are highly recommended for a general navigation & selection experience, tho.
+        void RespondToPointerLClick();
+        void RespondToPointerRClick();
+        void RespondToPointerMClick();
+        void RespondToPointerScroll(Vector2 input);
+
         void RespondToPrimaryDirectionalInput(Vector2 input); //right analog stick && directional Keys
         void RespondToSecondaryDirectionalInput(Vector2 input); //left analog stick && [whatever binding you desire]
         void RespondToTertiaryDirectionalInput(Vector2 input); //d pad && [whatever binding you desire. Might not always imply directional navigation (waepon wheels, for example)]
@@ -50,6 +55,9 @@ namespace dtsInventory
     /// </summary>
     public class GridInventoryManager : MonoBehaviour
     {
+        [Header("References")]
+        [SerializeField] private RectTransform _pointerContainerRectTransform;
+
         [Header("State Values")]
         private IGridUiElement _focusedElement = null;
         private bool _isInventoryShowing = false;
@@ -62,6 +70,7 @@ namespace dtsInventory
         private int _lastGridIndex = -1;
 
         //unity events
+        [Header("Events")]
         [Tooltip("What should run when the main 'show inventory' event is triggered?")]
         public UnityEvent OnShowGridUi;
         [Tooltip("What should run when the main 'hide inventory' event is triggered?")]
@@ -149,16 +158,16 @@ namespace dtsInventory
                 {
                     _openedMerchantGrids.Add(detectedGrid);
                     //Debug.Log("And it's a MERCHANT, too! Merchant tracked");
-                    if (detectedGrid.IsPersonal())
-                        Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
+                    //if (detectedGrid.IsPersonal())
+                    //    Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
                 }
 
                 if (detectedGrid.IsPersonal())
                 {
                     _openedPersonalGrids.Add(detectedGrid);
-                    Debug.Log("And it's marked as PERSONAL. Personal invntory tracked");
-                    if (detectedGrid.IsMerchant())
-                        Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
+                    //Debug.Log("And it's marked as PERSONAL. Personal invntory tracked");
+                    //if (detectedGrid.IsMerchant())
+                    //    Debug.LogError("Inventories SHOULD NOT be marked as both MERCHANT and PERSONAL. This will result in unexpected behavior.");
                 }
             }
         }
@@ -343,6 +352,7 @@ namespace dtsInventory
                 }
             }
         }
+        public RectTransform GetPointerRectTransform() { return _pointerContainerRectTransform; }
 
 
 
@@ -471,6 +481,39 @@ namespace dtsInventory
                 OnHideGridUi?.Invoke();
             }
                 
+        }
+
+        public void RelayPointerLClick() 
+        {
+            if (_focusedElement == null)
+                return;
+
+            if (_isInventoryShowing)
+                _focusedElement.RespondToPointerLClick();
+        }
+        public void RelayPointerRClick() 
+        {
+            if (_focusedElement == null)
+                return;
+
+            if (_isInventoryShowing)
+                _focusedElement.RespondToPointerRClick();
+        }
+        public void RelayPointerMClick() 
+        {
+            if (_focusedElement == null)
+                return;
+
+            if (_isInventoryShowing)
+                _focusedElement.RespondToPointerMClick();
+        }
+        public void RelayPointerScroll(Vector2 input) 
+        {
+            if (_focusedElement == null)
+                return;
+
+            if (_isInventoryShowing)
+                _focusedElement.RespondToPointerScroll(input);
         }
 
         public void RelayPrimaryInputToFocusedElement(Vector2 directionalInput)
@@ -604,6 +647,7 @@ namespace dtsInventory
         }
 
 
+        public static RectTransform GetPointerRectTransform() { return  _controller.GetPointerRectTransform(); }
         public static int CountOpenedGrids() { return _controller.CountOpenedGrids(); }
         public static int CountOpenedMerchants() { return _controller.CountOpenedMerchants(); }
         public static int CountOpenedPersonalGrids() { return _controller.CountOpenedPersonalGrids(); }

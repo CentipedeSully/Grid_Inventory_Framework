@@ -1268,6 +1268,12 @@ namespace dtsInventory
                 }
             }
         }
+
+        /// <summary>
+        /// Pins an amount of preexisting items-- TAKES (x) of the currently-hovered item and pins it. That amount automatically gets removed from the grid.
+        /// If x is greater than the number of preexisting items, the all items at the hovered position are picked up.
+        /// </summary>
+        /// <param name="amount">The amount to pick up</param>
         public void PinStack(int amount)
         {
             //only pin the stack [at the focused position] if a valid position exists and if there isn't a preexisting pinned stack
@@ -3218,12 +3224,14 @@ namespace dtsInventory
 
         public void RespondToJumpHotkey()
         {
-            Debug.Log($"Grid [{name}] Detected jumpElement input");
+            //Debug.Log($"Grid [{name}] Detected jumpElement input");
+            ClearHoveredCell();
 
-            
             if (!_alphaModifierPressed)
                 GIMHelper.FocusOnNextGrid();
-            else GIMHelper.FocusOnPreviousGrid();
+
+            else
+                GIMHelper.FocusOnPreviousGrid();
         }
 
         public void RespondToEditHotkey()
@@ -3287,6 +3295,77 @@ namespace dtsInventory
                 OnGridUnfocused?.Invoke();
             }
             
+        }
+
+        public void RespondToPointerLClick() 
+        {
+            if (!_isShowing || !_isFocused || _hoveredCell == (-1,-1))
+                return;
+
+            Debug.Log("Lclick Detected");
+
+            //If we aren't holding a pinned stack, pin the stack that's on the hovered grid position
+            if (_pinnedRectTransform == null && IsCellOccupied(_hoveredCell))
+            {
+                //perform the basic item pickup if the quick-action modifier isn't pressed
+                if (!_alphaModifierPressed)
+                    PinStack(GetStackValue(_hoveredCell));
+
+                //otherwise auto perform the quick-action feature
+                else
+                {
+
+                }
+            }
+
+
+            //otherwise if we ARE holding a stack, then drop the pinned stack at the hovered position 
+            else if (_pinnedRectTransform != null)
+            {
+                //drop the whole stack if the modifier isn't held
+                if (!_alphaModifierPressed)
+                    PlacePinnedStack(_pinnedValue);
+
+                //drop half of the stack (rounded up)
+                else
+                    PlacePinnedStack(Mathf.CeilToInt(_pinnedValue / 2));
+            }
+
+
+
+        }
+        public void RespondToPointerRClick() 
+        {
+            if (!_isShowing || !_isFocused || _hoveredCell == (-1, -1))
+                return;
+
+            //If we aren't holding a pinned stack, pin half of the stack that's on the hovered grid position
+            if (_pinnedRectTransform == null && IsCellOccupied(_hoveredCell))
+            {
+                if (GetStackValue(_hoveredCell) == 1)
+                    PinStack(1);
+                else
+                    PinStack(Mathf.CeilToInt(GetStackValue(_hoveredCell)/2));
+            }
+
+
+            //otherwise if we ARE holding a stack, then drop a single item at the hovered position 
+            else if (_pinnedRectTransform != null)
+            {
+                PlacePinnedStack(1);
+            }
+        }
+        public void RespondToPointerMClick() 
+        {
+            if (!_isShowing || !_isFocused || _hoveredCell == (-1, -1))
+                return;
+
+
+            RespondToConfirmInput();
+        }
+        public void RespondToPointerScroll(Vector2 input) 
+        { 
+        
         }
 
         public void RespondToSecondaryDirectionalInput(Vector2 input)

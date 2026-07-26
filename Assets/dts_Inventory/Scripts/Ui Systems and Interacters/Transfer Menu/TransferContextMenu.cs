@@ -418,6 +418,10 @@ namespace dtsInventory
             return _isShowing;
         }
 
+        public void RespondToPointerLClick() { }
+        public void RespondToPointerRClick() { }
+        public void RespondToPointerMClick() { }
+        public void RespondToPointerScroll(Vector2 input) { }
 
         public void ReadAlphaInput(bool input)
         {

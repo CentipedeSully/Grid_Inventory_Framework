@@ -32,6 +32,14 @@ namespace dtsInventory
                 InvManagerHelper.SetHoveredCell(this);
                 InvManagerHelper.BringWindowToFront(_grid.GetParentWindow());
             }*/
+
+            //only react to active & focused grids
+            if (_grid.IsShown() && _grid.IsFocused())
+            {
+                //Debug.Log($"Entering Cell: ({_index.Item1},{_index.Item2})");
+                _grid.SetHoveredCell(_index);
+                
+            }
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -41,6 +49,13 @@ namespace dtsInventory
             {
                 InvManagerHelper.ClearHoveredCell(this);
             }*/
+
+            //only react to active & focused grids
+            if (_grid.IsShown() && _grid.IsFocused())
+            {
+                //Debug.Log($"Leaving Cell: ({_index.Item1},{_index.Item2})");
+                _grid.ClearHoveredCell();
+            }
         }
 
 

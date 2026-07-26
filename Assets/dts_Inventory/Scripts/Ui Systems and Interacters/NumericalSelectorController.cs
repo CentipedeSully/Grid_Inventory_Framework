@@ -205,6 +205,11 @@ namespace dtsInventory
             }
         }
 
+        public void RespondToPointerLClick() { }
+        public void RespondToPointerRClick() { }
+        public void RespondToPointerMClick() { }
+        public void RespondToPointerScroll(Vector2 input) { }
+
         public void RespondToPrimaryDirectionalInput(Vector2 input)
         {
             if (input.y > .1f)

@@ -837,6 +837,11 @@ namespace dtsInventory
         public void UpdateGIMOnShown(IGridUiElement self) { GIMHelper.UpdateGIMOnShown(this); }
         public void UpdateGIMOnHidden(IGridUiElement self) { GIMHelper.UpdateGIMOnHidden(this); }
 
+        public void RespondToPointerLClick() { }
+        public void RespondToPointerRClick() { }
+        public void RespondToPointerMClick() { }
+        public void RespondToPointerScroll(Vector2 input) { }
+
         public void FocusOnUi()
         {
             if (!_isFocused && _isShowing)
